@@ -1,0 +1,100 @@
+# FeaGPT Configuration
+# Copy this file and set your API key before running
+
+llm:
+  provider: "gemini"
+    model: "gemini-2.5-pro"
+      api_key: "${GEMINI_API_KEY}"
+        temperature: 0.1
+          max_tokens: 8192
+
+          knowledge_base:
+            embedding_model: "all-MiniLM-L6-v2"
+              embedding_dim: 384
+                similarity_threshold: 0.85
+                  materials_path: "knowledge/materials.json"
+                    geometry_patterns_path: "knowledge/geometry_patterns.json"
+                      solver_configs_path: "knowledge/solver_configs.json"
+
+                      geometry:
+                        output_format: "step"
+                          freecad_path: null  # Auto-detect; set to explicit path if needed
+                            validation:
+                                check_closed_volume: true
+                                    check_self_intersection: true
+                                        tolerance_mm: 0.1
+                                          blacklisted_operations:
+                                              - "os.system"
+                                                  - "os.popen"
+                                                      - "subprocess.call"
+                                                          - "subprocess.run"
+                                                              - "subprocess.Popen"
+                                                                  - "eval"
+                                                                      - "exec"
+                                                                          - "__import__"
+                                                                              - "importlib"
+                                                                                  - "shutil.rmtree"
+                                                                                      - "os.remove"
+                                                                                          - "os.unlink"
+                                                                                              - "os.rmdir"
+                                                                                                  - "socket"
+                                                                                                      - "http"
+                                                                                                          - "urllib"
+                                                                                                              - "requests"
+
+                                                                                                              meshing:
+                                                                                                                backend: "gmsh"
+                                                                                                                  levels:
+                                                                                                                      ultra_fine:
+                                                                                                                            min_size: 0.2
+                                                                                                                                  max_size: 1.0
+                                                                                                                                        description: "Thin-walled structures, feature size ~0.2mm"
+                                                                                                                                            fine:
+                                                                                                                                                  min_size: 0.5
+                                                                                                                                                        max_size: 3.0
+                                                                                                                                                              description: "Standard precision, feature size ~1.0mm"
+                                                                                                                                                                  medium:
+                                                                                                                                                                        min_size: 2.0
+                                                                                                                                                                              max_size: 8.0
+                                                                                                                                                                                    description: "Preliminary design, feature size ~2.0mm"
+                                                                                                                                                                                        coarse:
+                                                                                                                                                                                              min_size: 5.0
+                                                                                                                                                                                                    max_size: 20.0
+                                                                                                                                                                                                          description: "Rapid exploration, feature size ~5.0mm"
+                                                                                                                                                                                                            default_level: "fine"
+                                                                                                                                                                                                              element_type: "C3D10"
+
+                                                                                                                                                                                                              simulation:
+                                                                                                                                                                                                                solver: "calculix"
+                                                                                                                                                                                                                  calculix_path: "ccx"
+                                                                                                                                                                                                                    max_iterations: 100
+                                                                                                                                                                                                                      convergence_tolerance: 1.0e-6
+                                                                                                                                                                                                                        output_format: "frd"
+
+                                                                                                                                                                                                                        analysis:
+                                                                                                                                                                                                                          methods:
+                                                                                                                                                                                                                              - "pareto"
+                                                                                                                                                                                                                                  - "sensitivity"
+                                                                                                                                                                                                                                      - "fatigue"
+                                                                                                                                                                                                                                          - "surrogate"
+                                                                                                                                                                                                                                              - "clustering"
+                                                                                                                                                                                                                                                fatigue:
+                                                                                                                                                                                                                                                    sn_curve: "basquin"
+                                                                                                                                                                                                                                                        r_ratio: 0.0
+
+                                                                                                                                                                                                                                                        batch:
+                                                                                                                                                                                                                                                          max_workers: 10
+                                                                                                                                                                                                                                                            max_batch_size: 500
+                                                                                                                                                                                                                                                              memory_per_case_mb: 512
+                                                                                                                                                                                                                                                                retry_count: 3
+                                                                                                                                                                                                                                                                  isolation: true
+
+                                                                                                                                                                                                                                                                  output:
+                                                                                                                                                                                                                                                                    directory: "results"
+                                                                                                                                                                                                                                                                      save_intermediate: true
+                                                                                                                                                                                                                                                                        plot_format: "png"
+                                                                                                                                                                                                                                                                          dpi: 300
+
+                                                                                                                                                                                                                                                                          logging:
+                                                                                                                                                                                                                                                                            level: "INFO"
+                                                                                                                                                                                                                                                                              file: "feagpt.log"
