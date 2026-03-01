@@ -1,0 +1,28 @@
+{
+      "indexes": [
+          {
+                "collectionGroup": "jobs",
+                      "queryScope": "COLLECTION",
+                            "fields": [
+                                    { "fieldPath": "userId", "order": "ASCENDING" },
+                                            { "fieldPath": "createdAt", "order": "DESCENDING" }
+                                                  ]
+                                                      },
+                                                          {
+                                                                "collectionGroup": "jobs"      "queryScope": "COLLECTION"      "fields": [
+                                                                            { "fieldPath": "userId", "order": "ASCENDING"        { "fieldPath": "status", "order": "ASCENDING"      ]
+                                                                                },
+                                                                                    {
+                                                                                          "collectionGroup": "results",
+                                                                                                "queryScope": "COLLECTION",
+                                                                                                      "fields": [
+                                                                                                                { "fieldPath": "userId", "order": "ASCENDING" },
+                                                                                                                        { "fieldPath": "completedAt", "order": "DESCENDING" }
+                                                                                                                              ]
+                                                                                                                                  }
+                                                                                                                                    ],
+                                                                                                                                      "fieldOverrides": []
+                                                                                                                                      }
+                                                                                                      ]
+                                                                ]
+}

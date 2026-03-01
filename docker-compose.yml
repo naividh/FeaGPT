@@ -1,0 +1,77 @@
+version: "3.8"
+
+services:
+  feagpt-api:
+      build:
+            context: .
+                  dockerfile: Dockerfile
+                      container_name: feagpt-api
+                          ports:
+                                - "8000:8000"
+                                    environment:
+                                          - GEMINI_API_KEY=${GEMINI_API_KEY}
+                                                - FEAGPT_ENV=development
+                                                      - FEAGPT_CONFIG=/app/config.yaml
+                                                          volumes:
+                                                                - ./results:/app/results
+                                                                      - ./knowledge:/app/knowledge
+                                                                          deploy:
+                                                                                resources:
+                                                                                        limits:
+                                                                                                  memory: 4G
+                                                                                                            cpus: "2.0"
+                                                                                                                healthcheck:
+                                                                                                                      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+                                                                                                                            interval: 30s
+                                                                                                                                  timeout: 10s
+                                                                                                                                        retries: 3
+                                                                                                                                              start_period: 15s
+                                                                                                                                                  restart: unless-stopped
+
+                                                                                                                                                    feagpt-worker:
+                                                                                                                                                        build:
+                                                                                                                                                              context: .
+                                                                                                                                                                    dockerfile: Dockerfile
+                                                                                                                                                                        container_name: feagpt-worker    command: python -m feagpt.batch.worker
+                                                                                                                                                                            environment:
+                                                                                                                                                                                  - GEMINI_API_KEY=${GEMINI_API_KEY}
+                                                                                                                                                                                        - FEAGPT_ENV=development
+                                                                                                                                                                                              - REDIS_URL=redis://redis:6379
+                                                                                                                                                                                                  volumes:
+                                                                                                                                                                                                        - ./results:/app/results
+                                                                                                                                                                                                              - ./knowledge:/app/knowledge
+                                                                                                                                                                                                                  depends_on:
+                                                                                                                                                                                                                        - redis
+                                                                                                                                                                                                                            deploy:
+                                                                                                                                                                                                                                  resources:
+                                                                                                                                                                                                                                          limits:
+                                                                                                                                                                                                                                                    memory: 8G
+                                                                                                                                                                                                                                                              cpus: "4.0"
+                                                                                                                                                                                                                                                                  restart: unless-stopped
+
+                                                                                                                                                                                                                                                                    redis:
+                                                                                                                                                                                                                                                                        image: redis:7-alpine
+                                                                                                                                                                                                                                                                            container_name: feagpt-redis
+                                                                                                                                                                                                                                                                                ports:
+                                                                                                                                                                                                                                                                                      - "6379:6379"
+                                                                                                                                                                                                                                                                                          volumes:
+                                                                                                                                                                                                                                                                                                - redis-data:/data
+                                                                                                                                                                                                                                                                                                    restart: unless-stopped
+
+                                                                                                                                                                                                                                                                                                      firebase-emulator:
+                                                                                                                                                                                                                                                                                                          image: node:18-alpine    container_name: feagpt-firebase
+                                                                                                                                                                                                                                                                                                              working_dir: /app
+                                                                                                                                                                                                                                                                                                                  command: >
+                                                                                                                                                                                                                                                                                                                        sh -c "npm install -g firebase-tools &&
+                                                                                                                                                                                                                                                                                                                                     firebase emulators:start --only firestore,storage --project demo-feagpt"
+                                                                                                                                                                                                                                                                                                                                         ports:
+                                                                                                                                                                                                                                                                                                                                               - "4000:4000"   # Emulator UI
+                                                                                                                                                                                                                                                                                                                                                     - "8080:8080"   # Firestore
+                                                                                                                                                                                                                                                                                                                                                           - "9199:9199"   # Storage
+                                                                                                                                                                                                                                                                                                                                                               volumes:
+                                                                                                                                                                                                                                                                                                                                                                     - ./firebase.json:/app/firebase.json
+                                                                                                                                                                                                                                                                                                                                                                         environment:
+                                                                                                                                                                                                                                                                                                                                                                               - FIREBASE_TOKEN=${FIREBASE_TOKEN:-}
+                                                                                                                                                                                                                                                                                                                                                                               
+                                                                                                                                                                                                                                                                                                                                                                               volumes:
+                                                                                                                                                                                                                                                                                                                                                                                 redis-data:"

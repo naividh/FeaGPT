@@ -1,0 +1,36 @@
+rules_version = '2';
+service cloud.firestore {
+      match /databases/{database}/documents {
+            // Simulation jobs - authenticated users can create and read their own
+                match /jobs/{jobId} {
+                          allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+                                allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+                                      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
+                                            allow delete: if false; // No deletes
+                }
+                    
+                        // Results - read-only after creation
+                            match /results/{resultId} {
+                                      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+                                            allow create: if request.auth != null;
+                                                  allow update, delete: if false;
+                            }
+                                
+                                    // Knowledge base - read-only for all authenticated users
+                                        match /knowledge/{docId} {
+                                                  allow read: if request.auth != null;
+                                                        allow write: if false; // Admin only via server
+                                        }
+                                            
+                                                // User profiles
+                                                    match /users/{userId} {
+                                                              allow read, write: if request.auth != null && request.auth.uid == userId;
+                                                    }
+      }
+}
+                                                    }
+                                        }
+                            }
+                }
+      }
+}
