@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FeaGPT - AI-Powered Finite Element Analysis</title>
+  <style>
+    :root{--p:#2563eb;--pd:#1d4ed8;--bg:#0f172a;--sf:#1e293b;--t:#f8fafc;--tm:#94a3b8;--ac:#38bdf8;--ok:#22c55e;--bd:#334155}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--t);min-height:100vh}
+    .c{max-width:1200px;margin:0 auto;padding:0 24px}
+    header{border-bottom:1px solid var(--bd);padding:16px 0}
+    .hi{display:flex;align-items:center;justify-content:space-between}
+    .logo{font-size:24px;font-weight:700;color:var(--ac)}.logo span{color:var(--t)}
+    nav a{color:var(--tm);text-decoration:none;margin-left:32px;font-size:14px}nav a:hover{color:var(--t)}
+    .hero{text-align:center;padding:80px 0 60px}
+    .hero h1{font-size:48px;font-weight:800;line-height:1.1;margin-bottom:24px;background:linear-gradient(135deg,var(--ac),#818cf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+    .hero p{font-size:20px;color:var(--tm);max-width:640px;margin:0 auto 40px;line-height:1.6}
+    .cc{max-width:800px;margin:0 auto;background:var(--sf);border-radius:16px;border:1px solid var(--bd);overflow:hidden}
+    .ch{padding:16px 24px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:12px}
+    .sd{width:8px;height:8px;border-radius:50%;background:var(--ok)}
+    .ch span{font-size:14px;color:var(--tm)}
+    .cm{padding:24px;min-height:300px;max-height:400px;overflow-y:auto}
+    .m{margin-bottom:16px;display:flex;gap:12px}
+    .m.b .av{background:var(--p);color:#fff;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0}
+    .m.u .av{background:#6366f1;color:#fff;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+    .m .ct{background:rgba(255,255,255,.05);padding:12px 16px;border-radius:12px;font-size:14px;line-height:1.6;max-width:600px}
+    .m.b .ct{border:1px solid var(--bd)}
+    .m.u{flex-direction:row-reverse}.m.u .ct{background:var(--p);border:none}
+    .ci{padding:16px 24px;border-top:1px solid var(--bd);display:flex;gap:12px}
+    .ci input{flex:1;background:rgba(255,255,255,.05);border:1px solid var(--bd);border-radius:12px;padding:12px 16px;color:var(--t);font-size:14px;outline:none}
+    .ci input:focus{border-color:var(--p)}.ci input::placeholder{color:var(--tm)}
+    .ci button{background:var(--p);color:#fff;border:none;border-radius:12px;padding:12px 24px;font-size:14px;font-weight:600;cursor:pointer}
+    .ci button:hover{background:var(--pd)}.ci button:disabled{opacity:.5;cursor:not-allowed}
+    .pl{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;padding:60px 0}
+    .ps{background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:24px;text-align:center}
+    .ps.ac{border-color:var(--ac);box-shadow:0 0 20px rgba(56,189,248,.1)}
+    .ps .sn{width:32px;height:32px;border-radius:50%;background:var(--p);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;margin:0 auto 12px}
+    .ps h3{font-size:14px;font-weight:600;margin-bottom:8px}.ps p{font-size:12px;color:var(--tm);line-height:1.4}
+    .fs{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;padding:0 0 80px}
+    .f{background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:32px}
+    .f h3{font-size:18px;font-weight:600;margin-bottom:12px}.f p{font-size:14px;color:var(--tm);line-height:1.6}
+    .st{text-align:center;font-size:32px;font-weight:700;margin-bottom:16px}
+    .ss{text-align:center;color:var(--tm);margin-bottom:48px;font-size:16px}
+    footer{border-top:1px solid var(--bd);padding:32px 0;text-align:center;color:var(--tm);font-size:14px}
+    .ti{display:inline-flex;gap:4px;padding:4px 0}
+    .ti span{width:6px;height:6px;border-radius:50%;background:var(--tm);animation:tp 1.4s infinite}
+    .ti span:nth-child(2){animation-delay:.2s}.ti span:nth-child(3){animation-delay:.4s}
+    @keyframes tp{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-4px)}}
+    @media(max-width:768px){.hero h1{font-size:32px}.pl{grid-template-columns:1fr}.fs{grid-template-columns:1fr}}
+    </style>
+  </head>
+  <body>
+    <header><div class="c hi"><div class="logo">Fea<span>GPT</span></div>div><nav><a href="#pipeline">Pipeline</a>a><a href="#features">Features</a>a><a href="https://github.com/naividh/FeaGPT" target="_blank">GitHub</a>a><a href="https://arxiv.org/abs/2510.21993" target="_blank">Paper</a>a></nav></div>div></header>
+  <section class="hero"><div class="c"><h1>Natural Language to Finite Element Analysis</h1><p>Describe your engineering problem in plain English. FeaGPT handles geometry, meshing, simulation, and analysis automatically.</p></div>div></section>section>
+  <div class="c">
+  <div class="cc"><div class="ch"><div class="sd"></div>div><span>FeaGPT is ready</span></div>div>
+  <div class="cm" id="msgs"><div class="m b"><div class="av">F</div>div><div class="ct">Welcome to FeaGPT! Describe your structural analysis problem and I'll handle the complete FEA workflow.</div>div></div>div></div>div>
+  <div class="ci"><input type="text" id="inp" placeholder="e.g., Analyze a NACA4412 wing with 200mm chord, 2 spars..."><button id="btn" onclick="go()">Send</button>button></div>div></div>div>
+  <div class="pl" id="pipeline">
+  <div class="ps" id="s1"><div class="sn">1</div>div><h3>Planning</h3><p>Analyze intent, extract parameters</p></div>div>
+  <div class="ps" id="s2"><div class="sn">2</div>div><h3>Geometry</h3><p>Generate CAD models via FreeCAD</p></div>div>
+  <div class="ps" id="s3"><div class="sn">3</div>div><h3>Meshing</h3><p>Adaptive mesh with Gmsh</p></div>div>
+  <div class="ps" id="s4"><div class="sn">4</div>div><h3>Simulation</h3><p>CalculiX FEA solver</p></div>div>
+  <div class="ps" id="s5"><div class="sn">5</div>div><h3>Analysis</h3><p>Results and optimization</p></div>div>
+  </div>div>
+  <h2 class="st" id="features">Capabilities</h2><p class="ss">End-to-end automation from natural language to validated FEA results</p>
+  <div class="fs">
+  <div class="f"><h3>Knowledge-Augmented Geometry</h3><p>Validated patterns for NACA airfoils, turbocharger blades, pressure vessels. Novel designs via LLM.</p></div>div>
+  <div class="f"><h3>Adaptive Meshing</h3><p>Automatic refinement based on geometric features. Distance-based gradation for stress concentrations.</p></div>div>
+  <div class="f"><h3>Multi-Objective Optimization</h3><p>Pareto front, sensitivity analysis, S-N fatigue assessment, surrogate modeling.</p></div>div>
+  <div class="f"><h3>Batch Processing</h3><p>432-config parametric studies from one input. Parallel execution with dynamic resource allocation.</p></div>div>
+  <div class="f"><h3>Industrial Validation</h3><p>Turbocharger at 110,000 RPM. Cyclic symmetry, prestressed modal, centrifugal loading.</p></div>div>
+  <div class="f"><h3>Self-Improving Knowledge Base</h3><p>Vector-indexed semantic search. Successful analyses expand capabilities.</p></div>div>
+  </div>div></div>div>
+  <footer><div class="c"><p>FeaGPT - End-to-End Agentic AI for Finite Element Analysis</p>p><p style="margin-top:8px">University of Stuttgart &middot; University of Exeter</p>p></div>div></footer>
+  <script>
+    const M=document.getElementById('msgs'),I=document.getElementById('inp'),B=document.getElementById('btn');
+    const R=[{s:1,t:"Analyzing... Detected NACA4412 airfoil. Material: Al-7075-T6. Parameters: 200mm chord, 2 spars at 33% and 65% chord."},{s:2,t:"Generating geometry via FreeCAD... NACA4412 profile computed. Shell: 1.5mm, spar: 1.5mm. Boolean ops complete. STEP exported."},{s:3,t:"Creating mesh with Gmsh... Fine level. 129,390 tets. Refinement at spar-root (hmin=0.5mm). All Jacobians positive."},{s:4,t:"CalculiX solver... 8-step load spectrum (cruise 1.0g, maneuver 2.5g, gust 1.8g, landing 3.0g). Converged in 17 iterations."},{s:5,t:"Results: Max stress=473 MPa at spar-root. Safety factor=1.06. Displacement=2.3mm. Fatigue life>1.49M cycles."}];
+    function add(t,u){const d=document.createElement('div');d.className='m '+(u?'u':'b');d.innerHTML='<div class="av">'+(u?'U':'F')+'</div><div class="ct">'+t+'</div>';M.appendChild(d);M.scrollTop=M.scrollHeight}
+    function typ(){const d=document.createElement('div');d.className='m b';d.id='tp';d.innerHTML='<div class="av">F</div><div class="ct"><div class="ti"><span></span><span></span><span></span></div></div>';M.appendChild(d);M.scrollTop=M.scrollHeight}
+    function hl(n){document.querySelectorAll('.ps').forEach(s=>s.classList.remove('ac'));const e=document.getElementById('s'+n);if(e)e.classList.add('ac')}
+    async function go(){const t=I.value.trim();if(!t)return;add(t,true);I.value='';B.disabled=true;for(let i=0;i<R.length;i++){typ();hl(R[i].s);await new Promise(r=>setTimeout(r,1500+Math.random()*1000));const e=document.getElementById('tp');if(e)e.remove();add(R[i].t,false)}hl(0);B.disabled=false;add("Analysis complete! Describe another problem or modify parameters.",false)}
+    I.addEventListener('keypress',e=>{if(e.key==='Enter')go()});
+  </script>
+  </body>
+</html>html>
+  </script></footer></p></p></h1></nav></span></header>
+  </body>
+  </style></title>
+  </head>
