@@ -1,0 +1,138 @@
+"""
+FeaGPT Batch Worker
+Standalone worker process for executing FEA simulations from a job queue.
+Used in docker-compose deployment with Redis as the message broker.
+
+Usage: python -m feagpt.batch.worker
+"""
+import os
+import sys
+import json
+import time
+import logging
+import signal
+from pathlib import Path
+
+logger = logging.getLogger(__name__)
+
+_shutdown = False
+
+
+def signal_handler(signum, frame):
+      global _shutdown
+      logger.info(f"Received signal {signum}, shutting down gracefully...")
+      _shutdown = True
+
+
+signal.signal(signal.SIGTERM, signal_handler)
+signal.signal(signal.SIGINT, signal_handler)
+
+
+class BatchWorker:
+      """Worker that pulls simulation jobs from Redis and executes them."""
+
+    def __init__(self):
+              self.redis_url = os.environ.get("REDIS_URL", "redis://localhost:6379")
+              self.redis_client = None
+              self.config = None
+              self.pipeline = None
+
+    def initialize(self):
+              """Initialize worker with Redis connection and pipeline."""
+              try:
+                            import redis
+                            self.redis_client = redis.from_url(self.redis_url)
+                            self.redis_client.ping()
+                            logger.info(f"Connected to Redis at {self.redis_url}")
+except ImportError:
+            logger.error("redis package not installed: pip install redis")
+            sys.exit(1)
+except Exception as e:
+            logger.error(f"Failed to connect to Redis: {e}")
+            sys.exit(1)
+
+        from feagpt.config import FeaGPTConfig
+        from feagpt.pipeline import GMSAPipeline
+
+        config_path = os.environ.get("FEAGPT_CONFIG", "config.yaml")
+        if Path(config_path).exists():
+                      self.config = FeaGPTConfig(config_path)
+else:
+              self.config = FeaGPTConfig()
+
+        self.pipeline = GMSAPipeline(self.config)
+        logger.info("Worker initialized successfully")
+
+    def run(self):
+              """Main worker loop - pull and execute jobs."""
+              logger.info("Starting batch worker loop...")
+
+        while not _shutdown:
+                      try:
+                                        result = self.redis_client.brpop("feagpt:jobs", timeout=5)
+                                        if result is None:
+                                                              continue
+
+                                        _, job_data = result
+                                        job = json.loads(job_data)
+                                        job_id = job.get("id", "unknown")
+
+                          logger.info(f"Processing job {job_id}")
+                self._update_status(job_id, "running")
+
+                try:
+                                      description = job.get("description", "")
+                                      output_dir = job.get("output_dir", f"results/job_{job_id}")
+                                      result = self.pipeline.run(description, output_dir=output_dir)
+                                      self._update_status(job_id, "completed", result=result)
+                                      logger.info(f"Job {job_id} completed successfully")
+except Exception as e:
+                    logger.error(f"Job {job_id} failed: {e}")
+                    self._update_status(job_id, "failed", error=str(e))
+                    retries = job.get("retries", 0)
+                    max_retries = job.get("max_retries", 3)
+                    if retries < max_retries:
+                                              job["retries"] = retries + 1
+                                              self.redis_client.lpush("feagpt:jobs", json.dumps(job))
+                                              logger.info(f"Re-queued job {job_id} (retry {retries + 1}/{max_retries})")
+
+except Exception as e:
+                logger.error(f"Worker error: {e}")
+                time.sleep(5)
+
+        logger.info("Worker shutdown complete")
+
+    def _update_status(self, job_id, status, result=None, error=None):
+              """Update job status in Redis."""
+        status_data = {
+                      "job_id": job_id,
+                      "status": status,
+                      "timestamp": time.time(),
+        }
+        if result:
+                      status_data["result"] = result
+        if error:
+                      status_data["error"] = error
+
+        self.redis_client.hset(
+                      f"feagpt:status:{job_id}",
+                      mapping={
+                                        k: json.dumps(v) if isinstance(v, (dict, list)) else str(v)
+                                        for k, v in status_data.items()
+                      },
+        )
+        self.redis_client.publish(f"feagpt:updates:{job_id}", json.dumps(status_data))
+
+
+def main():
+      logging.basicConfig(
+                level=logging.INFO,
+                format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+      )
+    worker = BatchWorker()
+    worker.initialize()
+    worker.run()
+
+
+if __name__ == "__main__":
+      main()
