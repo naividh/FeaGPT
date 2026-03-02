@@ -1,80 +1,280 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>FeaGPT - AI-Powered Finite Element Analysis</title>
-        <style>
-        :root{--p:#2563eb;--pd:#1d4ed8;--bg:#0f172a;--sf:#1e293b;--t:#f8fafc;--tm:#94a3b8;--ac:#38bdf8;--ok:#22c55e;--bd:#334155}
-        *{margin:0;padding:0;box-sizing:border-box}
-        body{font-family:'Inter',-apple-system,sans-serif;background:var(--bg);color:var(--t);min-height:100vh}
-        <div class="c">max-width:1200px;margin:0 auto;padding:0 24px</div>header{border-bottom:1px solid var(--bd);padding:16px 0}
-        .hi{display:flex;align-items:center;justify-content:space-between}
-        .logo{font-size:24px;font-weight:700;color:var(--ac)}.logo span{color:var(--t)}
-        nav a{color:var(--tm);text-decoration:none;margin-left:32px;font-size:14px}nav <a:hover>color:var(--t)</a:hover>.hero{text-align:center;padding:80px 0 60px}
-        .hero h1{font-size:48px;font-weight:800;line-height:1.1;margin-bottom:24px;background:linear-gradient(135deg,var(--ac),#818cf8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-        .hero p{font-size:20px;color:var(--tm);max-width:640px;margin:0 auto 40px;line-height:1.6}
-        .cc{max-width:800px;margin:0 auto;background:var(--sf);border-radius:16px;border:1px solid var(--bd);overflow:hidden}
-        <div class="ch">padding:16px 24px;border-bottom:1px solid var(--bd);display:flex;align-items:center;gap:12px</div>.sd{width:8px;height:8px;border-radius:50%;background:var(--ok)}
-        .ch span{font-size:14px;color:var(--tm)}
-        <div class="cm">padding:24px;min-height:300px;max-height:400px;overflow-y:auto</div><div class="m">margin-bottom:16px;display:flex;gap:12px</div>.m.b .av{background:var(--p);color:#fff;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0}
-        .m.u .av{background:#6366f1;color:#fff;width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
-        .m .ct{background:rgba(255,255,255,.05);padding:12px 16px;border-radius:12px;font-size:14px;line-height:1.6;max-width:600px}
-        .m.b <div class="ct">border:1px solid var(--bd)</div>.m.u{flex-direction:row-reverse}.m.u .ct{background:var(--p);border:none}
-        .ci{padding:16px 24px;border-top:1px solid var(--bd);display:flex;gap:12px}
-        .ci <input type=".ci input:focus{border-color:var(--p)}.ci input::placeholder{color:var(--tm)}
-        .ci button{background:var(--p);color:#fff;border:none;border-radius:12px;padding:12px 24px;font-size:14px;font-weight:600;cursor:pointer}
-        .ci button:hover{background:var(--pd)}.ci button:disabled{opacity:.5;cursor:not-allowed}
-        .pl{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;padding:60px 0}
-        .ps{background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:24px;text-align:center}
-        .ps.ac{border-color:var(--ac);box-shadow:0 0 20px rgba(56,189,248,.1)}
-        .ps .sn{width:32px;height:32px;border-radius:50%;background:var(--p);color:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;margin:0 auto 12px}
-        .ps h3{font-size:14px;font-weight:600;margin-bottom:8px}.ps p{font-size:12px;color:var(--tm);line-height:1.4}
-        .fs{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;padding:0 0 80px}
-        .f{background:var(--sf);border:1px solid var(--bd);border-radius:12px;padding:32px}
-        .f h3{font-size:18px;font-weight:600;margin-bottom:12px}.f p{font-size:14px;color:var(--tm);line-height:1.6}
-        .st{text-align:center;font-size:32px;font-weight:700;margin-bottom:16px}
-        .ss{text-align:center;color:var(--tm);margin-bottom:48px;font-size:16px}
-        footer{border-top:1px solid var(--bd);padding:32px 0;text-align:center;color:var(--tm);font-size:14px}
-        .ti{display:inline-flex;gap:4px;padding:4px 0}
-        .ti span{width:6px;height:6px;border-radius:50%;background:var(--tm);animation:tp 1.4s infinite}
-        .ti span:nth-child(2){animation-delay:.2s}.ti span:nth-child(3){animation-delay:.4s}
-        @keyframes tp{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-4px)}}
-        @media(max-width:768px){.hero h1{font-size:32px}.pl{grid-template-columns:1fr}.fs{grid-template-columns:1fr}}
-        </style>
-        </head>
-        <body>
-        <header><div class="c hi"><div class="logo">Fea<span>GPT</span></div><nav><a href="#pipeline">Pipeline</a><a href="#features">Features</a><a href="https://github.com/naividh/FeaGPT" target="_blank">GitHub</a><a href="https://arxiv.org/abs/2510.21993" target="_blank">Paper</a></nav></div></header>
-        <section class="hero"><div class="c"><h1>Natural Language to Finite Element Analysis</h1><p>Describe your engineering problem in plain English. FeaGPT handles geometry, meshing, simulation, and analysis automatically.</p></div></section>
-        <div class="c">
-            <div class="cc"><div class="ch"><div class="sd"></div><span>FeaGPT is ready</span></div>
-            <div class="cm" id="msgs"><div class="m b"><div class="av">F</div><div class="ct">Welcome to FeaGPT! Describe your structural analysis problem and I'll handle the complete FEA workflow.</div></div></div>
-            <div class="ci"><input type="text" id="inp" placeholder="e.g., Analyze a NACA4412 wing with 200mm chord, 2 spars..."><button id="btn" onclick="go()">Send</button></div></div>
-            <div class="pl" id="pipeline">
-            <div class="ps" id="s1"><div class="sn">1</div><h3>Planning</h3><p>Analyze intent, extract parameters</p></div>
-            <div class="ps" id="s2"><div class="sn">2</div><h3>Geometry</h3><p>Generate CAD models via FreeCAD</p></div>
-            <div class="ps" id="s3"><div class="sn">3</div><h3>Meshing</h3><p>Adaptive mesh with Gmsh</p></div>
-            <div class="ps" id="s4"><div class="sn">4</div><h3>Simulation</h3><p>CalculiX FEA solver</p></div>
-            <div class="ps" id="s5"><div class="sn">5</div><h3>Analysis</h3><p>Results and optimization</p></div>
-            </div>
-            <h2 class="st" id="features">Capabilities</h2><p class="ss">End-to-end automation from natural language to validated FEA results</p>
-            <div class="fs">
-            <div class="f"><h3>Knowledge-Augmented Geometry</h3><p>Validated patterns for NACA airfoils, turbocharger blades, pressure vessels. Novel designs via LLM.</p></div>
-            <div class="f"><h3>Adaptive Meshing</h3><p>Automatic refinement based on geometric features. Distance-based gradation for stress concentrations.</p></div>
-            <div class="f"><h3>Multi-Objective Optimization</h3><p>Pareto front, sensitivity analysis, S-N fatigue assessment, surrogate modeling.</p></div>
-            <div class="f"><h3>Batch Processing</h3><p>432-config parametric studies from one input. Parallel execution with dynamic resource allocation.</p></div>
-            <div class="f"><h3>Industrial Validation</h3><p>Turbocharger at 110,000 RPM. Cyclic symmetry, prestressed modal, centrifugal loading.</p></div>
-            <div class="f"><h3>Self-Improving Knowledge Base</h3><p>Vector-indexed semantic search. Successful analyses expand capabilities.</p></div>
-            </div></div>
-            <footer><div class="c"><p>FeaGPT - End-to-End Agentic AI for Finite Element Analysis</p><p style="margin-top:8px">University of Stuttgart &middot; University of Exeter</p></div></footer>
-            <script>
-            const M=document.getElementById('msgs'),I=document.getElementById('inp'),B=document.getElementById('btn');
-            const R=[{s:1,t:"Analyzing... Detected NACA4412 airfoil. Material: Al-7075-T6. Parameters: 200mm chord, 2 spars at 33% and 65% chord."},{s:2,t:"Generating geometry via FreeCAD... NACA4412 profile computed. Shell: 1.5mm, spar: 1.5mm. Boolean ops complete. STEP exported."},{s:3,t:"Creating mesh with Gmsh... Fine level. 129,390 tets. Refinement at spar-root (hmin=0.5mm). All Jacobians positive."},{s:4,t:"CalculiX solver... 8-step load spectrum (cruise 1.0g, maneuver 2.5g, gust 1.8g, landing 3.0g). Converged in 17 iterations."},{s:5,t:"Results: Max stress=473 MPa at spar-root. Safety factor=1.06. Displacement=2.3mm. Fatigue life>1.49M cycles."}];
-            function add(t,u){const d=document.createElement('div');d.className='m '+(u?'u':'b');d.innerHTML='<div class="av">'+(u?'U':'F')+'</div><div class="ct">'+t+'</div>';M.appendChild(d);M.scrollTop=M.scrollHeight}
-            function typ(){const d=document.createElement('div');d.className='m b';d.id='tp';d.innerHTML='<div class="av">F</div><div class="ct"><div class="ti"><span></span><span></span><span></span></div></div>';M.appendChild(d);M.scrollTop=M.scrollHeight}
-            function hl(n){document.querySelectorAll('.ps').forEach(s=>s.classList.remove('ac'));const e=document.getElementById('s'+n);if(e)e.classList.add('ac')}
-            async function go(){const t=I.value.trim();if(!t)return;add(t,true);I.value='';B.disabled=true;for(let i=0;i<R.length;i++){typ();hl(R[i].s);await new Promise(r=>setTimeout(r,1500+Math.random()*1000));const e=document.getElementById('tp');if(e)e.remove();add(R[i].t,false)}hl(0);B.disabled=false;add("Analysis complete! Describe another problem or modify parameters.",false)}
-            I.addEventListener('keypress',e=>{if(e.key==='Enter')go()});
-            </script>
-            </body>
-        </html>">flex:1;background:rgba(255,255,255,.05);border:1px solid var(--bd);border-radius:12px;padding:12px 16px;color:var(--t);font-size:14px;outline:none</input>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>FeaGPT - AI-Powered Finite Element Analysis</title>
+<meta name="description" content="FeaGPT: End-to-End Agentic AI for Finite Element Analysis. Transform natural language into validated FEA results.">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#0a0a0f;--card:#12121a;--border:#1e1e2e;--accent:#6366f1;--accent2:#818cf8;--text:#e2e8f0;--muted:#94a3b8;--green:#22c55e;--red:#ef4444;--yellow:#eab308}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+a{color:var(--accent2);text-decoration:none}
+a:hover{text-decoration:underline}
+a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Header */
+header{padding:1rem 2rem;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.logo{font-size:1.5rem;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--accent2),#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+nav{display:flex;gap:1.5rem}
+nav a{color:var(--muted);font-size:0.9rem;transition:color 0.2s}
+nav a:hover{color:var(--text)}
+
+/* Hero */
+.hero{text-align:center;padding:3rem 2rem 2rem}
+.hero h1{font-size:2.5rem;margin-bottom:0.75rem;background:linear-gradient(135deg,#fff,var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero p{color:var(--muted);max-width:600px;margin:0 auto;line-height:1.6}
+
+/* Main content */
+main{flex:1;display:flex;flex-direction:column;align-items:center;padding:1rem 2rem 2rem;gap:2rem;max-width:1200px;margin:0 auto;width:100%}
+
+/* Pipeline steps */
+.pipeline{display:flex;gap:0.5rem;flex-wrap:wrap;justify-content:center}
+.step{padding:0.5rem 1rem;border-radius:0.5rem;background:var(--card);border:1px solid var(--border);font-size:0.85rem;color:var(--muted);transition:all 0.3s;display:flex;align-items:center;gap:0.4rem}
+.step.active{border-color:var(--accent);color:var(--accent2);box-shadow:0 0 12px rgba(99,102,241,0.2)}
+.step.done{border-color:var(--green);color:var(--green)}
+.step-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);transition:background 0.3s}
+.step.active .step-dot{background:var(--accent2);animation:pulse 1.5s infinite}
+.step.done .step-dot{background:var(--green)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+
+/* Chat */
+.chat-container{width:100%;max-width:800px;background:var(--card);border-radius:1rem;border:1px solid var(--border);display:flex;flex-direction:column;height:450px}
+#msgs{flex:1;overflow-y:auto;padding:1.5rem;display:flex;flex-direction:column;gap:0.75rem}
+#msgs::-webkit-scrollbar{width:6px}
+#msgs::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.msg{max-width:85%;padding:0.75rem 1rem;border-radius:0.75rem;line-height:1.5;font-size:0.9rem;word-wrap:break-word;overflow-wrap:break-word}
+.msg.user{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:0.25rem}
+.msg.bot{align-self:flex-start;background:var(--border);color:var(--text);border-bottom-left-radius:0.25rem}
+.msg.bot .step-label{color:var(--accent2);font-weight:600;font-size:0.8rem;margin-bottom:0.25rem}
+.typing{display:flex;gap:4px;padding:0.75rem 1rem;align-self:flex-start;background:var(--border);border-radius:0.75rem;border-bottom-left-radius:0.25rem}
+.typing span{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:bounce 1.4s infinite}
+.typing span:nth-child(2){animation-delay:0.2s}
+.typing span:nth-child(3){animation-delay:0.4s}
+@keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-8px)}}
+.chat-input{display:flex;gap:0.5rem;padding:1rem;border-top:1px solid var(--border)}
+#inp{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:0.5rem;padding:0.6rem 1rem;color:var(--text);font-size:0.9rem;outline:none;transition:border-color 0.2s;max-length:1000}
+#inp:focus{border-color:var(--accent)}
+#inp::placeholder{color:var(--muted)}
+#btn{background:var(--accent);color:#fff;border:none;border-radius:0.5rem;padding:0.6rem 1.5rem;cursor:pointer;font-size:0.9rem;transition:background 0.2s}
+#btn:hover:not(:disabled){background:var(--accent2)}
+#btn:disabled{opacity:0.5;cursor:not-allowed}
+#btn:focus-visible{outline:2px solid var(--accent2);outline-offset:2px}
+
+/* Features */
+.features{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;width:100%;max-width:800px}
+.feat{background:var(--card);border:1px solid var(--border);border-radius:0.75rem;padding:1.25rem}
+.feat h3{font-size:0.95rem;margin-bottom:0.4rem;color:var(--text)}
+.feat p{font-size:0.8rem;color:var(--muted);line-height:1.5}
+
+/* Footer */
+footer{text-align:center;padding:1.5rem;border-top:1px solid var(--border);color:var(--muted);font-size:0.8rem}
+footer a{color:var(--accent2)}
+
+/* Counter for msg limit */
+.msg-count{font-size:0.7rem;color:var(--muted);text-align:right;padding:0 1rem}
+</style>
+</head>
+<body>
+<header>
+<div class="logo">FeaGPT</div>
+<nav role="navigation" aria-label="Main navigation">
+<a href="https://github.com/naividh/FeaGPT" target="_blank" rel="noopener noreferrer">GitHub</a>
+<a href="https://arxiv.org/abs/2510.21993" target="_blank" rel="noopener noreferrer">Paper</a>
+<a href="https://github.com/naividh/FeaGPT#readme" target="_blank" rel="noopener noreferrer">Docs</a>
+</nav>
+</header>
+
+<div class="hero">
+<h1>FeaGPT</h1>
+<p>End-to-End Agentic AI for Finite Element Analysis. Transform natural language engineering descriptions into validated FEA results.</p>
+</div>
+
+<main role="main">
+<div class="pipeline" role="status" aria-label="Pipeline progress">
+<div class="step" id="s0"><span class="step-dot"></span>Planning</div>
+<div class="step" id="s1"><span class="step-dot"></span>Geometry</div>
+<div class="step" id="s2"><span class="step-dot"></span>Meshing</div>
+<div class="step" id="s3"><span class="step-dot"></span>Simulation</div>
+<div class="step" id="s4"><span class="step-dot"></span>Analysis</div>
+</div>
+
+<div class="chat-container">
+<div id="msgs" role="log" aria-label="Chat messages" aria-live="polite"></div>
+<div class="msg-count" id="counter"></div>
+<div class="chat-input">
+<label for="inp" class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">Enter engineering description</label>
+<input id="inp" type="text" placeholder="Describe your FEA problem..." maxlength="1000" autocomplete="off" aria-label="Engineering description input">
+<button id="btn" type="button" aria-label="Send message">Analyze</button>
+</div>
+</div>
+
+<div class="features">
+<div class="feat"><h3>Multi-Objective Optimization</h3><p>Pareto front, sensitivity analysis, S-N fatigue life assessment.</p></div>
+<div class="feat"><h3>Batch Processing</h3><p>432-config parametric studies from one input. Parallel execution.</p></div>
+<div class="feat"><h3>Industrial Validation</h3><p>Turbocharger at 110,000 RPM. Cyclic symmetry, prestressed modal.</p></div>
+<div class="feat"><h3>Self-Improving Knowledge Base</h3><p>Vector-indexed semantic search. Successful analyses feed back.</p></div>
+</div>
+</main>
+
+<footer><div>FeaGPT &mdash; End-to-End Agentic AI for Finite Element Analysis</div><div style="margin-top:0.5rem"><a href="https://github.com/naividh/FeaGPT" target="_blank" rel="noopener noreferrer">GitHub</a> &middot; <a href="https://arxiv.org/abs/2510.21993" target="_blank" rel="noopener noreferrer">arXiv:2510.21993</a></div></footer>
+
+<script>
+(function(){
+  'use strict';
+  const M = document.getElementById('msgs');
+  const I = document.getElementById('inp');
+  const B = document.getElementById('btn');
+  const counter = document.getElementById('counter');
+  let msgCount = 0;
+  const MAX_MSGS = 50;
+
+  // Sanitize text to prevent XSS
+  function esc(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  // Add message to chat
+  function addMsg(text, isUser) {
+    if (msgCount >= MAX_MSGS) {
+      const first = M.querySelector('.msg');
+      if (first) first.remove();
+    }
+    const d = document.createElement('div');
+    d.className = 'msg ' + (isUser ? 'user' : 'bot');
+    if (isUser) {
+      // User messages: use textContent to prevent XSS
+      d.textContent = text;
+    } else {
+      // Bot messages: safe HTML from our code only
+      d.innerHTML = text;
+    }
+    M.appendChild(d);
+    M.scrollTop = M.scrollHeight;
+    msgCount++;
+    counter.textContent = msgCount + '/' + MAX_MSGS;
+  }
+
+  // Typing indicator
+  function showTyping() {
+    const t = document.createElement('div');
+    t.className = 'typing';
+    t.id = 'tp';
+    t.setAttribute('aria-label', 'FeaGPT is thinking');
+    t.innerHTML = '<span></span><span></span><span></span>';
+    M.appendChild(t);
+    M.scrollTop = M.scrollHeight;
+  }
+
+  function hideTyping() {
+    const t = document.getElementById('tp');
+    if (t) t.remove();
+  }
+
+  // Pipeline step highlighting
+  function setStep(idx) {
+    document.querySelectorAll('.step').forEach((s, i) => {
+      s.classList.remove('active', 'done');
+      if (i < idx) s.classList.add('done');
+      else if (i === idx) s.classList.add('active');
+    });
+  }
+
+  function clearSteps() {
+    document.querySelectorAll('.step').forEach(s => {
+      s.classList.remove('active', 'done');
+    });
+  }
+
+  // Delay helper
+  function wait(ms) {
+    return new Promise(r => setTimeout(r, ms));
+  }
+
+  // Response generator based on user input
+  function getResponses(input) {
+    const lower = input.toLowerCase();
+    const responses = [];
+
+    // Step 0: Planning
+    if (lower.includes('naca') || lower.includes('airfoil') || lower.includes('wing')) {
+      const naca = (lower.match(/naca\s*(\d{4})/i) || ['', '4412'])[1];
+      responses.push({step:0, text:'<div class="step-label">Planning</div>Detected NACA' + esc(naca) + ' airfoil configuration. Material: Al-7075-T6 (E=71.7 GPa, v=0.33). Formulating analysis strategy...'});
+      responses.push({step:1, text:'<div class="step-label">Geometry</div>Generating NACA' + esc(naca) + ' profile via parametric FreeCAD script. Chord: 200mm, Span: 200mm. Creating spar-rib internal structure with Boolean operations...'});
+      responses.push({step:2, text:'<div class="step-label">Meshing</div>Adaptive mesh generation with Gmsh. Fine level: h_min=0.5mm near spar-rib junctions, h_max=3.0mm far-field. ~130,000 C3D10 elements. Jacobian validation: 100% positive.'});
+      responses.push({step:3, text:'<div class="step-label">Simulation</div>CalculiX solver configured. Static analysis with aerodynamic loading. Convergence achieved in 17 iterations. Max von Mises stress: 473 MPa at spar-root junction.'});
+      responses.push({step:4, text:'<div class="step-label">Analysis</div>Results: Safety factor 1.06 against yield (503 MPa). Stress concentration at spar-root identified. Shell thickness is dominant parameter (r=-0.77). 11 Pareto-optimal designs identified from design space.'});
+    } else if (lower.includes('turbo') || lower.includes('compressor') || lower.includes('turbine') || lower.includes('rpm')) {
+      const rpm = (lower.match(/(\d[\d,]+)\s*rpm/i) || ['', '110,000'])[1];
+      responses.push({step:0, text:'<div class="step-label">Planning</div>Rotating machinery analysis detected. RPM: ' + esc(rpm) + '. Setting up cyclic symmetry and centrifugal loading.'});
+      responses.push({step:1, text:'<div class="step-label">Geometry</div>Generating rotor geometry with blade profiles. Cyclic symmetry sector created.'});
+      responses.push({step:2, text:'<div class="step-label">Meshing</div>Meshing with refinement at blade roots and leading edges. Tetrahedral elements with smooth gradation.'});
+      responses.push({step:3, text:'<div class="step-label">Simulation</div>Prestressed modal analysis: static centrifugal + frequency extraction (Lanczos, 6 modes). Converged. Max stress: 432 MPa at blade root.'});
+      responses.push({step:4, text:'<div class="step-label">Analysis</div>Blade tip deflection: 0.37mm. Natural frequencies extracted. No resonance at operating speed. Design is structurally adequate.'});
+    } else if (lower.includes('beam') || lower.includes('cantilever')) {
+      responses.push({step:0, text:'<div class="step-label">Planning</div>Cantilever beam analysis. Inferring fixed-free boundary conditions. Material: structural steel unless specified.'});
+      responses.push({step:1, text:'<div class="step-label">Geometry</div>Generating rectangular beam geometry via FreeCAD. Exporting STEP file.'});
+      responses.push({step:2, text:'<div class="step-label">Meshing</div>Uniform mesh with refinement at fixed support. C3D10 elements.'});
+      responses.push({step:3, text:'<div class="step-label">Simulation</div>Static analysis complete. Maximum stress and deflection computed at expected locations.'});
+      responses.push({step:4, text:'<div class="step-label">Analysis</div>Results validated against analytical beam theory. Stress distribution matches Euler-Bernoulli prediction within 2%.'});
+    } else if (lower.includes('plate') || lower.includes('hole')) {
+      responses.push({step:0, text:'<div class="step-label">Planning</div>Plate with hole analysis. Classic stress concentration problem. Setting up tensile loading with fixed edge.'});
+      responses.push({step:1, text:'<div class="step-label">Geometry</div>Rectangular plate with central hole. Boolean cut operation for hole geometry.'});
+      responses.push({step:2, text:'<div class="step-label">Meshing</div>Refined mesh around hole boundary (h_min=0.2mm). Smooth transition to coarser far-field elements.'});
+      responses.push({step:3, text:'<div class="step-label">Simulation</div>Linear static analysis. Stress concentration factor K_t converging to theoretical value of ~3.0.'});
+      responses.push({step:4, text:'<div class="step-label">Analysis</div>Peak von Mises stress at hole edge. SCF = 2.98 (theoretical: 3.0). Error: 0.7%. Mesh convergence verified.'});
+    } else {
+      responses.push({step:0, text:'<div class="step-label">Planning</div>Analyzing your engineering description. Identifying material, loading, and boundary conditions...'});
+      responses.push({step:1, text:'<div class="step-label">Geometry</div>Generating geometry from description. Creating parametric FreeCAD script...'});
+      responses.push({step:2, text:'<div class="step-label">Meshing</div>Adaptive mesh generation with physics-aware refinement at critical regions.'});
+      responses.push({step:3, text:'<div class="step-label">Simulation</div>CalculiX solver configured and executed. Solution converged.'});
+      responses.push({step:4, text:'<div class="step-label">Analysis</div>Results extracted. To run actual FEA, install the backend: pip install feagpt. See <a href="https://github.com/naividh/FeaGPT#readme" target="_blank">documentation</a>.'});
+    }
+    return responses;
+  }
+
+  // Main handler
+  async function go() {
+    const t = I.value.trim();
+    if (!t) return;
+    if (t.length > 1000) {
+      addMsg('Input too long. Maximum 1000 characters.', false);
+      return;
+    }
+
+    addMsg(t, true);
+    I.value = '';
+    B.disabled = true;
+    clearSteps();
+
+    const responses = getResponses(t);
+
+    for (const r of responses) {
+      showTyping();
+      setStep(r.step);
+      await wait(1200 + Math.random() * 800);
+      hideTyping();
+      addMsg(r.text, false);
+    }
+
+    // Mark all steps done
+    document.querySelectorAll('.step').forEach(s => {
+      s.classList.remove('active');
+      s.classList.add('done');
+    });
+
+    B.disabled = false;
+    I.focus();
+  }
+
+  B.addEventListener('click', go);
+  I.addEventListener('keypress', e => { if (e.key === 'Enter') go(); });
+
+  // Initial welcome message
+  addMsg('Welcome to FeaGPT! Describe your FEA problem in natural language. Try: "Analyze a NACA4412 wing structure" or "Cantilever beam with 500N load"', false);
+})();
+</script>
+</body>
+</html>
