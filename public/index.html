@@ -791,7 +791,320 @@ function postProcess(mesh,u,D,logFn){
   logFn('Post-processing complete. Max von Mises='+maxVM.toFixed(4)+' Pa, Max disp='+maxDisp.toFixed(6)+' m');
   return{vonMises,elemStress,nodalStress,maxVM,maxDisp};
 }
-// ===================== MAIN ANALYSIS RUNNER =====================
+
+// ===================== STL PARSER =====================
+function parseSTL(buffer) {
+  // Try binary STL first
+  if (buffer instanceof ArrayBuffer) {
+    return parseSTLBinary(buffer);
+  }
+  // ASCII STL
+  if (typeof buffer === 'string') {
+    if (buffer.trim().startsWith('solid')) {
+      return parseSTLAscii(buffer);
+    }
+  }
+  return null;
+}
+
+function parseSTLBinary(buffer) {
+  const dv = new DataView(buffer);
+  const nTriangles = dv.getUint32(80, true);
+  if (nTriangles === 0 || 84 + nTriangles * 50 > buffer.byteLength) return null;
+  const triangles = [];
+  let offset = 84;
+  for (let i = 0; i < nTriangles; i++) {
+    const nx = dv.getFloat32(offset, true); offset += 4;
+    const ny = dv.getFloat32(offset, true); offset += 4;
+    const nz = dv.getFloat32(offset, true); offset += 4;
+    const v1 = [dv.getFloat32(offset, true), dv.getFloat32(offset+4, true), dv.getFloat32(offset+8, true)]; offset += 12;
+    const v2 = [dv.getFloat32(offset, true), dv.getFloat32(offset+4, true), dv.getFloat32(offset+8, true)]; offset += 12;
+    const v3 = [dv.getFloat32(offset, true), dv.getFloat32(offset+4, true), dv.getFloat32(offset+8, true)]; offset += 12;
+    offset += 2; // attribute byte count
+    triangles.push({ normal: [nx, ny, nz], vertices: [v1, v2, v3] });
+  }
+  return { triangles, nTriangles };
+}
+
+function parseSTLAscii(text) {
+  const triangles = [];
+  const facetRe = /facet\s+normal\s+([\d.eE+-]+)\s+([\d.eE+-]+)\s+([\d.eE+-]+)/g;
+  const vertexRe = /vertex\s+([\d.eE+-]+)\s+([\d.eE+-]+)\s+([\d.eE+-]+)/g;
+  let match;
+  const normals = [];
+  while ((match = facetRe.exec(text)) !== null) {
+    normals.push([parseFloat(match[1]), parseFloat(match[2]), parseFloat(match[3])]);
+  }
+  const verts = [];
+  while ((match = vertexRe.exec(text)) !== null) {
+    verts.push([parseFloat(match[1]), parseFloat(match[2]), parseFloat(match[3])]);
+  }
+  for (let i = 0; i < normals.length; i++) {
+    triangles.push({ normal: normals[i], vertices: [verts[i*3], verts[i*3+1], verts[i*3+2]] });
+  }
+  return { triangles, nTriangles: triangles.length };
+}
+
+
+// ===================== STL TO TET4 MESH (Voxelization) =====================
+function stlToTetMesh(stlData, density) {
+  const tris = stlData.triangles;
+  // Get bounding box
+  let minX=Infinity, minY=Infinity, minZ=Infinity;
+  let maxX=-Infinity, maxY=-Infinity, maxZ=-Infinity;
+  for (const t of tris) {
+    for (const v of t.vertices) {
+      minX = Math.min(minX, v[0]); maxX = Math.max(maxX, v[0]);
+      minY = Math.min(minY, v[1]); maxY = Math.max(maxY, v[1]);
+      minZ = Math.min(minZ, v[2]); maxZ = Math.max(maxZ, v[2]);
+    }
+  }
+  const Lx = maxX - minX, Ly = maxY - minY, Lz = maxZ - minZ;
+  const maxDim = Math.max(Lx, Ly, Lz);
+  // Determine grid resolution based on density
+  const base = {coarse: 6, medium: 10, fine: 16, very_fine: 24}[density] || 10;
+  const nx = Math.max(3, Math.round(base * Lx / maxDim));
+  const ny = Math.max(3, Math.round(base * Ly / maxDim));
+  const nz = Math.max(3, Math.round(base * Lz / maxDim));
+  const dx = Lx / nx, dy = Ly / ny, dz = Lz / nz;
+
+  // Build triangle AABB list for fast ray intersection
+  const triAABBs = tris.map(t => {
+    const xs = t.vertices.map(v => v[0]), ys = t.vertices.map(v => v[1]), zs = t.vertices.map(v => v[2]);
+    return { min: [Math.min(...xs), Math.min(...ys), Math.min(...zs)], max: [Math.max(...xs), Math.max(...ys), Math.max(...zs)], tri: t };
+  });
+
+  // Ray casting: for each voxel center, cast ray in +X direction and count intersections
+  // If odd number -> inside
+  const voxelInside = new Uint8Array((nx) * (ny) * (nz));
+  const vidx = (i, j, k) => k * ny * nx + j * nx + i;
+
+  for (let k = 0; k < nz; k++) {
+    for (let j = 0; j < ny; j++) {
+      const cy = minY + (j + 0.5) * dy;
+      const cz = minZ + (k + 0.5) * dz;
+      // Collect all X-intersections for this ray
+      const xHits = [];
+      for (const ta of triAABBs) {
+        if (cy < ta.min[1] || cy > ta.max[1] || cz < ta.min[2] || cz > ta.max[2]) continue;
+        const hitX = rayTriangleIntersectX(cy, cz, ta.tri.vertices);
+        if (hitX !== null) xHits.push(hitX);
+      }
+      xHits.sort((a, b) => a - b);
+      // For each voxel in this row, count hits to the right
+      for (let i = 0; i < nx; i++) {
+        const cx = minX + (i + 0.5) * dx;
+        let count = 0;
+        for (const hx of xHits) {
+          if (hx > cx) count++;
+        }
+        if (count % 2 === 1) voxelInside[vidx(i, j, k)] = 1;
+      }
+    }
+  }
+
+  // If no voxels inside (open mesh / thin shell), fill all voxels that intersect triangles
+  let insideCount = 0;
+  for (let i = 0; i < voxelInside.length; i++) if (voxelInside[i]) insideCount++;
+  if (insideCount === 0) {
+    // Fallback: fill voxels that any triangle intersects
+    for (let k = 0; k < nz; k++) {
+      for (let j = 0; j < ny; j++) {
+        for (let i = 0; i < nx; i++) {
+          const cx = minX + (i + 0.5) * dx, cy = minY + (j + 0.5) * dy, cz = minZ + (k + 0.5) * dz;
+          for (const ta of triAABBs) {
+            if (cx >= ta.min[0] - dx && cx <= ta.max[0] + dx && cy >= ta.min[1] - dy && cy <= ta.max[1] + dy && cz >= ta.min[2] - dz && cz <= ta.max[2] + dz) {
+              voxelInside[vidx(i, j, k)] = 1;
+              break;
+            }
+          }
+        }
+      }
+    }
+    insideCount = 0;
+    for (let i = 0; i < voxelInside.length; i++) if (voxelInside[i]) insideCount++;
+  }
+
+  // Generate hex mesh from inside voxels, then split to tets
+  const nodeMap = {};
+  const nodes = [];
+  const hexElements = [];
+  
+  function getNode(i, j, k) {
+    const key = i + ',' + j + ',' + k;
+    if (nodeMap[key] !== undefined) return nodeMap[key];
+    const idx = nodes.length;
+    nodes.push([minX + i * dx, minY + j * dy, minZ + k * dz]);
+    nodeMap[key] = idx;
+    return idx;
+  }
+
+  for (let k = 0; k < nz; k++) {
+    for (let j = 0; j < ny; j++) {
+      for (let i = 0; i < nx; i++) {
+        if (!voxelInside[vidx(i, j, k)]) continue;
+        const n = [
+          getNode(i, j, k), getNode(i+1, j, k), getNode(i+1, j+1, k), getNode(i, j+1, k),
+          getNode(i, j, k+1), getNode(i+1, j, k+1), getNode(i+1, j+1, k+1), getNode(i, j+1, k+1)
+        ];
+        hexElements.push(n);
+      }
+    }
+  }
+
+  // Split each hex into 5 tets
+  const tetElements = [];
+  for (const h of hexElements) {
+    tetElements.push([h[0], h[1], h[3], h[4]]);
+    tetElements.push([h[1], h[2], h[3], h[6]]);
+    tetElements.push([h[1], h[4], h[5], h[6]]);
+    tetElements.push([h[3], h[4], h[6], h[7]]);
+    tetElements.push([h[1], h[3], h[4], h[6]]);
+  }
+
+  return {
+    nodes: nodes,
+    elements: tetElements,
+    type: 'tet4',
+    bbox: { min: [minX, minY, minZ], max: [maxX, maxY, maxZ], size: [Lx, Ly, Lz] },
+    voxelGrid: { nx, ny, nz },
+    insideVoxels: insideCount,
+    totalVoxels: nx * ny * nz,
+    source: 'stl'
+  };
+}
+
+// Ray-triangle intersection: ray from (y,z) in +X direction
+function rayTriangleIntersectX(ry, rz, verts) {
+  const v0 = verts[0], v1 = verts[1], v2 = verts[2];
+  // Project to YZ plane
+  const e1y = v1[1] - v0[1], e1z = v1[2] - v0[2];
+  const e2y = v2[1] - v0[1], e2z = v2[2] - v0[2];
+  const det = e1y * e2z - e1z * e2y;
+  if (Math.abs(det) < 1e-12) return null;
+  const idet = 1 / det;
+  const ty = ry - v0[1], tz = rz - v0[2];
+  const u = (ty * e2z - tz * e2y) * idet;
+  if (u < 0 || u > 1) return null;
+  const v = (e1y * tz - e1z * ty) * idet;
+  if (v < 0 || u + v > 1) return null;
+  // Compute x at intersection
+  const x = v0[0] + u * (v1[0] - v0[0]) + v * (v2[0] - v0[0]);
+  return x;
+}
+
+
+// ===================== STL-AWARE BOUNDARY CONDITIONS =====================
+function applyBCsSTL(csr, f, mesh, bcType, logFn) {
+  const nodes = mesh.nodes;
+  const nNodes = nodes.length;
+  const bbox = mesh.bbox;
+  const Lx = bbox.size[0];
+  const penalty = 1e20;
+  let bcCount = 0;
+  const tol = Lx * 0.02; // 2% tolerance for face detection
+  
+  for (let i = 0; i < nNodes; i++) {
+    let fix = false;
+    const x = nodes[i][0], y = nodes[i][1], z = nodes[i][2];
+    if (bcType === 'fixed' || bcType === 'encastre') {
+      if (Math.abs(x - bbox.min[0]) < tol) fix = true;
+    } else if (bcType === 'pinned') {
+      if (Math.abs(x - bbox.min[0]) < tol || Math.abs(x - bbox.max[0]) < tol) fix = true;
+    } else if (bcType === 'fixed-roller') {
+      if (Math.abs(x - bbox.min[0]) < tol) fix = true;
+      else if (Math.abs(x - bbox.max[0]) < tol) {
+        const dof = i * 3 + 1;
+        for (let k = csr.rowPtr[dof]; k < csr.rowPtr[dof+1]; k++) {
+          if (csr.colIdx[k] === dof) { csr.values[k] = penalty; break; }
+        }
+        f[dof] = 0; bcCount++;
+        continue;
+      }
+    }
+    if (fix) {
+      for (let d = 0; d < 3; d++) {
+        const dof = i * 3 + d;
+        for (let k = csr.rowPtr[dof]; k < csr.rowPtr[dof+1]; k++) {
+          if (csr.colIdx[k] === dof) { csr.values[k] = penalty; break; }
+        }
+        f[dof] = 0;
+      }
+      bcCount += 3;
+    }
+  }
+  logFn('Applied ' + bcCount + ' STL BCs (tol=' + tol.toFixed(4) + 'mm)');
+}
+
+// ===================== STL-AWARE LOAD APPLICATION =====================
+function applyLoadsSTL(f, mesh, loadType, mag, dir, logFn) {
+  const nodes = mesh.nodes;
+  const nNodes = nodes.length;
+  const bbox = mesh.bbox;
+  const Lx = bbox.size[0];
+  const tol = Lx * 0.02;
+  const dofDir = dir.includes('X') ? 0 : (dir.includes('Y') ? 1 : 2);
+  const sign = dir.includes('-') ? -1 : 1;
+
+  if (loadType === 'point') {
+    const tipNodes = [];
+    for (let i = 0; i < nNodes; i++) {
+      if (Math.abs(nodes[i][0] - bbox.max[0]) < tol) tipNodes.push(i);
+    }
+    if (tipNodes.length === 0) {
+      // Fallback: pick nodes closest to max X
+      const sorted = Array.from({length: nNodes}, (_, i) => i).sort((a, b) => nodes[b][0] - nodes[a][0]);
+      for (let i = 0; i < Math.min(10, nNodes); i++) tipNodes.push(sorted[i]);
+    }
+    const fPerNode = mag * sign / tipNodes.length;
+    for (const n of tipNodes) f[n * 3 + dofDir] += fPerNode;
+    logFn('STL Point load: ' + tipNodes.length + ' tip nodes, ' + fPerNode.toFixed(4) + ' N each');
+  } else if (loadType === 'distributed') {
+    const topNodes = [];
+    for (let i = 0; i < nNodes; i++) {
+      if (Math.abs(nodes[i][1] - bbox.max[1]) < tol) topNodes.push(i);
+    }
+    if (topNodes.length === 0) {
+      const sorted = Array.from({length: nNodes}, (_, i) => i).sort((a, b) => nodes[b][1] - nodes[a][1]);
+      for (let i = 0; i < Math.min(20, nNodes); i++) topNodes.push(sorted[i]);
+    }
+    const fPerNode = mag * sign / topNodes.length;
+    for (const n of topNodes) f[n * 3 + dofDir] += fPerNode;
+    logFn('STL Distributed load: ' + topNodes.length + ' surface nodes');
+  } else if (loadType === 'pressure') {
+    const topNodes = [];
+    for (let i = 0; i < nNodes; i++) {
+      if (Math.abs(nodes[i][1] - bbox.max[1]) < tol) topNodes.push(i);
+    }
+    if (topNodes.length === 0) {
+      const sorted = Array.from({length: nNodes}, (_, i) => i).sort((a, b) => nodes[b][1] - nodes[a][1]);
+      for (let i = 0; i < Math.min(20, nNodes); i++) topNodes.push(sorted[i]);
+    }
+    const area = bbox.size[0] * bbox.size[2];
+    const totalF = mag * area;
+    const fPerNode = totalF * sign / topNodes.length;
+    for (const n of topNodes) f[n * 3 + dofDir] += fPerNode;
+    logFn('STL Pressure: area=' + area.toFixed(4) + ', total=' + totalF.toFixed(2) + ' N');
+  } else if (loadType === 'moment') {
+    const tipNodes = [];
+    for (let i = 0; i < nNodes; i++) {
+      if (Math.abs(nodes[i][0] - bbox.max[0]) < tol) tipNodes.push(i);
+    }
+    if (tipNodes.length === 0) {
+      const sorted = Array.from({length: nNodes}, (_, i) => i).sort((a, b) => nodes[b][0] - nodes[a][0]);
+      for (let i = 0; i < Math.min(10, nNodes); i++) tipNodes.push(sorted[i]);
+    }
+    const cy = tipNodes.reduce((s, n) => s + nodes[n][1], 0) / tipNodes.length;
+    for (const n of tipNodes) {
+      const lever = nodes[n][1] - cy;
+      f[n * 3] += mag * sign * lever / tipNodes.length;
+    }
+    logFn('STL Moment: ' + tipNodes.length + ' tip nodes, M=' + mag + ' Nm');
+  }
+}
+
+
+// ===================== MODIFIED MAIN ANALYSIS RUNNER (STL-AWARE) =====================
 async function runAnalysis(){
   if(analysisRunning)return;analysisRunning=true;const t0=performance.now();
   const p={structType:document.getElementById("structType").value,L:+document.getElementById("dimL").value/1e3,W:+document.getElementById("dimW").value/1e3,H:+document.getElementById("dimH").value/1e3,T:+document.getElementById("dimT").value/1e3,material:document.getElementById("materialSelect").value,loadType:document.getElementById("loadType").value,loadMag:+document.getElementById("loadMag").value,loadDir:document.getElementById("loadDir").value,bcType:document.getElementById("bcType").value,elemType:document.getElementById("elemType").value,meshDensity:document.getElementById("meshDensity").value,analysisType:document.getElementById("analysisType").value,solver:document.getElementById("solver").value};
@@ -803,19 +1116,55 @@ async function runAnalysis(){
   document.getElementById("progressCard").style.display="block";
   document.getElementById("progressLog").innerHTML="";
 
-  const logFn=(msg)=>{const l=document.getElementById("progressLog");l.innerHTML+="<div>["+((performance.now()-t0)/1000).toFixed(2)+"s] "+msg+"</div>";l.scrollTop=l.scrollHeight;};
+  const logFn=(msg)=>{const l=document.getElementById("progressLog");l.innerHTML+="<div>["+((performance.now()-t0)/1000).toFixed(2)+"s] "+msg+"</div>";l.scrollTop=l.scrollHeight;console.log("[FEA] "+msg);};
   const setStep=(idx)=>{document.querySelectorAll(".progress-step").forEach((el,j)=>{el.classList.remove("active","done");if(j<idx)el.classList.add("done");if(j===idx)el.classList.add("active")});document.getElementById("progressFill").style.width=((idx+1)/4*100)+"%";};
 
   try {
     // STEP 1: Mesh generation
     setStep(0);
     await new Promise(r=>setTimeout(r,10));
-    logFn("Generating "+p.elemType+" mesh for "+p.structType+"...");
-    const divs=getMeshDivisions(p.meshDensity,p.L,p.W,p.H);
-    logFn("Mesh divisions: "+divs.nx+"x"+divs.ny+"x"+divs.nz);
-    let mesh;
-    if(p.elemType==='tet4') mesh=generateTet4Mesh(p.L,p.W,p.H,divs.nx,divs.ny,divs.nz);
-    else mesh=generateHex8Mesh(p.L,p.W,p.H,divs.nx,divs.ny,divs.nz);
+
+    // CHECK FOR UPLOADED STL FILE
+    let mesh = null;
+    let isSTL = false;
+    const stlFile = uploadedFiles.find(f => f.type === 'stl');
+    
+    if (stlFile) {
+      logFn("Found uploaded STL: " + stlFile.name + " (" + (stlFile.size/1024).toFixed(1) + " KB)");
+      logFn("Parsing STL file...");
+      const stlData = parseSTL(stlFile.content);
+      if (stlData && stlData.nTriangles > 0) {
+        logFn("STL parsed: " + stlData.nTriangles + " triangles");
+        logFn("Voxelizing STL geometry to tet4 mesh (density: " + p.meshDensity + ")...");
+        await new Promise(r=>setTimeout(r,10));
+        mesh = stlToTetMesh(stlData, p.meshDensity);
+        if (mesh && mesh.nodes.length > 0 && mesh.elements.length > 0) {
+          isSTL = true;
+          logFn("STL mesh: bbox=[" + mesh.bbox.min.map(v=>v.toFixed(2)).join(",") + "] to [" + mesh.bbox.max.map(v=>v.toFixed(2)).join(",") + "]");
+          logFn("STL mesh: " + mesh.nodes.length + " nodes, " + mesh.elements.length + " tet4 elements, " + (mesh.nodes.length*3) + " DOF");
+          logFn("Voxel grid: " + mesh.voxelGrid.nx + "x" + mesh.voxelGrid.ny + "x" + mesh.voxelGrid.nz + " (" + mesh.insideVoxels + "/" + mesh.totalVoxels + " inside)");
+          // Update geometry display values
+          document.getElementById("dimL").value = mesh.bbox.size[0].toFixed(1);
+          document.getElementById("dimW").value = mesh.bbox.size[1].toFixed(1);
+          document.getElementById("dimH").value = mesh.bbox.size[2].toFixed(1);
+        } else {
+          logFn("WARNING: STL voxelization produced empty mesh. Falling back to parametric geometry.");
+          mesh = null;
+        }
+      } else {
+        logFn("WARNING: Could not parse STL file. Falling back to parametric geometry.");
+      }
+    }
+
+    if (!mesh) {
+      // Standard parametric mesh generation
+      logFn("Generating "+p.elemType+" mesh for "+p.structType+"...");
+      const divs=getMeshDivisions(p.meshDensity,p.L,p.W,p.H);
+      logFn("Mesh divisions: "+divs.nx+"x"+divs.ny+"x"+divs.nz);
+      if(p.elemType==='tet4') mesh=generateTet4Mesh(p.L,p.W,p.H,divs.nx,divs.ny,divs.nz);
+      else mesh=generateHex8Mesh(p.L,p.W,p.H,divs.nx,divs.ny,divs.nz);
+    }
+
     logFn("Mesh: "+mesh.nodes.length+" nodes, "+mesh.elements.length+" elements, "+(mesh.nodes.length*3)+" DOF");
     const mq=computeMeshQuality(mesh);
     logFn("Mesh quality: avg="+mq.avg+", min="+mq.min);
@@ -825,7 +1174,7 @@ async function runAnalysis(){
     setStep(1);
     const D=elasticityD(E_Pa,nu);
     logFn("Material: "+mat.name+" (E="+mat.E+" GPa, nu="+nu+")");
-    logFn("Elasticity matrix D computed ("+((1+nu)*(1-2*nu)>0?"valid":"WARNING: near incompressible!")+")");
+    logFn("Elasticity matrix D computed ("+((1+nu)*(1-2*nu)>0?"valid":"WARNING: near incompressible!")+" )");
     const csr=assembleGlobal(mesh,D,logFn);
     logFn("CSR matrix: "+csr.rowPtr[csr.n]+" non-zeros");
     await new Promise(r=>setTimeout(r,10));
@@ -833,10 +1182,18 @@ async function runAnalysis(){
     // Apply loads
     const ndof=mesh.nodes.length*3;
     const f=new Float64Array(ndof);
-    applyLoads(f,mesh,p.loadType,p.loadMag,p.loadDir,logFn);
+    if (isSTL) {
+      applyLoadsSTL(f,mesh,p.loadType,p.loadMag,p.loadDir,logFn);
+    } else {
+      applyLoads(f,mesh,p.loadType,p.loadMag,p.loadDir,logFn);
+    }
 
     // Apply BCs
-    applyBCs(csr,f,mesh,p.bcType,logFn);
+    if (isSTL) {
+      applyBCsSTL(csr,f,mesh,p.bcType,logFn);
+    } else {
+      applyBCs(csr,f,mesh,p.bcType,logFn);
+    }
     await new Promise(r=>setTimeout(r,10));
 
     // STEP 3: Solve
@@ -861,17 +1218,19 @@ async function runAnalysis(){
     const sf=mat.yield/maxStressMPa;
     const totalTime=((performance.now()-t0)/1000).toFixed(2);
     logFn("DONE in "+totalTime+"s. Max stress="+maxStressMPa.toFixed(2)+" MPa, Max disp="+maxDispMm.toFixed(4)+" mm, SF="+sf.toFixed(2));
+    if(isSTL) logFn("Source: STL file ("+stlFile.name+")");
 
     document.querySelectorAll(".progress-step").forEach(el=>{el.classList.remove("active");el.classList.add("done")});
     document.getElementById("progressFill").style.width="100%";
     await new Promise(r=>setTimeout(r,300));
 
-    // Store results
+    // Stress profile
     const stressProfile=[];
     const Lx=Math.max(...mesh.nodes.map(n=>n[0]));
+    const LxMin=Math.min(...mesh.nodes.map(n=>n[0]));
     const nBins=20;
     for(let b=0;b<nBins;b++){
-      const xMin=b*Lx/nBins,xMax=(b+1)*Lx/nBins;
+      const xMin=LxMin+b*(Lx-LxMin)/nBins,xMax=LxMin+(b+1)*(Lx-LxMin)/nBins;
       const elems=[];
       for(let e=0;e<mesh.elements.length;e++){
         const cx=mesh.elements[e].reduce((s,n)=>s+mesh.nodes[n][0],0)/mesh.elements[e].length;
@@ -884,7 +1243,7 @@ async function runAnalysis(){
     // Displacement profile
     const dispProfile=[];
     for(let b=0;b<nBins;b++){
-      const xMin=b*Lx/nBins,xMax=(b+1)*Lx/nBins;
+      const xMin=LxMin+b*(Lx-LxMin)/nBins,xMax=LxMin+(b+1)*(Lx-LxMin)/nBins;
       const ns=[];
       for(let i=0;i<mesh.nodes.length;i++){
         if(mesh.nodes[i][0]>=xMin&&mesh.nodes[i][0]<xMax)ns.push(i);
@@ -892,6 +1251,11 @@ async function runAnalysis(){
       const avgD=ns.length>0?ns.reduce((s,n)=>s+Math.sqrt(sol.x[n*3]**2+sol.x[n*3+1]**2+sol.x[n*3+2]**2),0)/ns.length*1e3:0;
       dispProfile.push({x:((xMin+xMax)/2*1e3).toFixed(1),disp:+avgD.toFixed(4)});
     }
+
+    // Determine the L,W,H to use for display
+    const dispL = isSTL ? mesh.bbox.size[0]*1e3 : p.L*1e3;
+    const dispW = isSTL ? mesh.bbox.size[1]*1e3 : p.W*1e3;
+    const dispH = isSTL ? mesh.bbox.size[2]*1e3 : p.H*1e3;
 
     currentResults={
       maxStress:+maxStressMPa.toFixed(2),vonMises:+maxStressMPa.toFixed(2),
@@ -901,9 +1265,11 @@ async function runAnalysis(){
       stressProfile,dispProfile,
       solverIterations:sol.iterations,solverResidual:sol.residual,solverConverged:sol.converged,
       solverTime:+solveTime,computeTime:+totalTime,convergenceHistory:sol.history,
-      material:mat,params:{...p,L:p.L*1e3,W:p.W*1e3,H:p.H*1e3},
+      material:mat,params:{...p,L:dispL,W:dispW,H:dispH},
       mesh,displacements:sol.x,nodalStress:post.nodalStress,elemVonMises:post.vonMises,
-      timestamp:new Date().toISOString()
+      timestamp:new Date().toISOString(),
+      source: isSTL ? 'stl' : 'parametric',
+      stlFile: isSTL ? stlFile.name : null
     };
 
     document.getElementById("progressCard").style.display="none";
@@ -911,10 +1277,12 @@ async function runAnalysis(){
     saveToHistory(currentResults);
   } catch(err) {
     logFn("ERROR: "+err.message);
+    console.error(err);
     showToast("Analysis failed: "+err.message,"error");
   }
   analysisRunning=false;
 }
+
 // ===================== DISPLAY RESULTS =====================
 function displayResults(r){
   document.getElementById("resultsSection").style.display="block";
