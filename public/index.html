@@ -964,8 +964,8 @@ function stlToTetMesh(stlData, density) {
 
   return {
     nodes: nodes,
-    elements: tetElements,
-    type: 'tet4',
+    elements: hexElements,
+    type: 'hex8',
     bbox: { min: [minX, minY, minZ], max: [maxX, maxY, maxZ], size: [Lx, Ly, Lz] },
     voxelGrid: { nx, ny, nz },
     insideVoxels: insideCount,
@@ -1135,13 +1135,13 @@ async function runAnalysis(){
       const stlData = parseSTL(stlFile.content);
       if (stlData && stlData.nTriangles > 0) {
         logFn("STL parsed: " + stlData.nTriangles + " triangles");
-        logFn("Voxelizing STL geometry to tet4 mesh (density: " + p.meshDensity + ")...");
+        logFn("Voxelizing STL geometry to hex8 mesh (density: " + p.meshDensity + ")...");
         await new Promise(r=>setTimeout(r,10));
         mesh = stlToTetMesh(stlData, p.meshDensity);
         if (mesh && mesh.nodes.length > 0 && mesh.elements.length > 0) {
           isSTL = true;
           logFn("STL mesh: bbox=[" + mesh.bbox.min.map(v=>v.toFixed(2)).join(",") + "] to [" + mesh.bbox.max.map(v=>v.toFixed(2)).join(",") + "]");
-          logFn("STL mesh: " + mesh.nodes.length + " nodes, " + mesh.elements.length + " tet4 elements, " + (mesh.nodes.length*3) + " DOF");
+          logFn("STL mesh: " + mesh.nodes.length + " nodes, " + mesh.elements.length + " hex8 elements, " + (mesh.nodes.length*3) + " DOF");
           logFn("Voxel grid: " + mesh.voxelGrid.nx + "x" + mesh.voxelGrid.ny + "x" + mesh.voxelGrid.nz + " (" + mesh.insideVoxels + "/" + mesh.totalVoxels + " inside)");
           // Update geometry display values
           document.getElementById("dimL").value = mesh.bbox.size[0].toFixed(1);
@@ -1435,3 +1435,4 @@ document.addEventListener("DOMContentLoaded",()=>{updateMaterialProps();renderMa
 </script>
 </body>
 </html>
+
