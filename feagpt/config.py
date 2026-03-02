@@ -1,159 +1,172 @@
-"""Configuration management for FeaGPT."""
+"""
+Configuration module for FeaGPT.
 
+Defines all configuration dataclasses for the pipeline.
+"""
 import os
 import yaml
+import logging
 from dataclasses import dataclass, field
-from typing import Optional
 from pathlib import Path
+from typing import Optional, List, Dict
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
 class LLMConfig:
+    """LLM (Gemini) configuration."""
     provider: str = "gemini"
-        model: str = "gemini-2.5-pro"
-            api_key: str = ""
-                temperature: float = 0.1
-                    max_tokens: int = 8192
+    model: str = "gemini-2.0-flash"
+    api_key: str = ""
+    temperature: float = 0.1
+    max_tokens: int = 4096
+    timeout: int = 30
 
 
-                    @dataclass
-                    class KnowledgeBaseConfig:
-                        embedding_model: str = "all-MiniLM-L6-v2"
-                            embedding_dim: int = 384
-                                similarity_threshold: float = 0.85
-                                    materials_path: str = "knowledge/materials.json"
-                                        geometry_patterns_path: str = "knowledge/geometry_patterns.json"
-                                            solver_configs_path: str = "knowledge/solver_configs.json"
+@dataclass
+class GeometryConfig:
+    """Geometry generation configuration."""
+    freecad_path: Optional[str] = None
+    output_format: str = "step"
+    max_generation_time: int = 120
+    validation_enabled: bool = True
 
 
-                                            @dataclass
-                                            class MeshLevelConfig:
-                                                min_size: float = 0.5
-                                                    max_size: float = 3.0
-                                                        description: str = ""
+@dataclass
+class MeshConfig:
+    """Meshing configuration."""
+    default_density: str = "medium"
+    default_element_type: str = "C3D10"
+    gmsh_path: Optional[str] = None
+    min_quality: float = 0.3
+    max_aspect_ratio: float = 10.0
+    refinement_enabled: bool = True
 
 
-                                                        @dataclass
-                                                        class MeshConfig:
-                                                            backend: str = "gmsh"
-                                                                levels: dict = field(default_factory=dict)
-                                                                    default_level: str = "fine"
-                                                                        element_type: str = "C3D10"
+@dataclass
+class SimulationConfig:
+    """FEA simulation configuration."""
+    solver: str = "CalculiX"
+    calculix_path: str = "ccx"
+    max_iterations: int = 1000
+    convergence_tol: float = 1e-6
+    timeout: int = 600
+    num_threads: int = 1
 
 
-                                                                        @dataclass
-                                                                        class GeometryConfig:
-                                                                            output_format: str = "step"
-                                                                                freecad_path: Optional[str] = None
-                                                                                    tolerance_mm: float = 0.1
-                                                                                        blacklisted_operations: list = field(default_factory=list)
+@dataclass
+class AnalysisConfig:
+    """Post-processing analysis configuration."""
+    fatigue_enabled: bool = True
+    pareto_enabled: bool = True
+    sensitivity_enabled: bool = True
+    surrogate_enabled: bool = False
+    safety_factor: float = 2.0
 
 
-                                                                                        @dataclass
-                                                                                        class SimulationConfig:
-                                                                                            solver: str = "calculix"
-                                                                                                calculix_path: str = "ccx"
-                                                                                                    max_iterations: int = 100
-                                                                                                        convergence_tolerance: float = 1.0e-6
-                                                                                                            output_format: str = "frd"
+@dataclass
+class BatchConfig:
+    """Batch processing configuration."""
+    max_workers: int = 4
+    timeout_per_job: int = 1800
+    checkpoint_interval: int = 10
+    output_dir: str = "batch_results"
 
 
-                                                                                                            @dataclass
-                                                                                                            class BatchConfig:
-                                                                                                                max_workers: int = 10
-                                                                                                                    max_batch_size: int = 500
-                                                                                                                        memory_per_case_mb: int = 512
-                                                                                                                            retry_count: int = 3
-                                                                                                                                isolation: bool = True
+@dataclass
+class KnowledgeBaseConfig:
+    """Knowledge base configuration."""
+    materials_path: str = "knowledge/materials.json"
+    geometry_patterns_path: str = "knowledge/geometry_patterns.json"
+    solver_configs_path: str = "knowledge/solver_configs.json"
 
 
-                                                                                                                                @dataclass
-                                                                                                                                class OutputConfig:
-                                                                                                                                    directory: str = "results"
-                                                                                                                                        save_intermediate: bool = True
-                                                                                                                                            plot_format: str = "png"
-                                                                                                                                                dpi: int = 300
+@dataclass
+class FeaGPTConfig:
+    """Main configuration for the FeaGPT pipeline."""
+    llm: LLMConfig = field(default_factory=LLMConfig)
+    geometry: GeometryConfig = field(default_factory=GeometryConfig)
+    mesh: MeshConfig = field(default_factory=MeshConfig)
+    simulation: SimulationConfig = field(default_factory=SimulationConfig)
+    analysis: AnalysisConfig = field(default_factory=AnalysisConfig)
+    batch: BatchConfig = field(default_factory=BatchConfig)
+    knowledge_base: KnowledgeBaseConfig = field(
+        default_factory=KnowledgeBaseConfig
+    )
 
+    workspace: str = "workspace"
+    log_level: str = "INFO"
+    debug: bool = False
 
-                                                                                                                                                class FeaGPTConfig:
-                                                                                                                                                    """Central configuration for FeaGPT."""
+    @classmethod
+    def from_yaml(cls, path: str) -> "FeaGPTConfig":
+        """Load configuration from YAML file."""
+        with open(path, "r") as f:
+            data = yaml.safe_load(f) or {}
 
-                                                                                                                                                        def __init__(self, config_path: Optional[str] = None):
-                                                                                                                                                                self.llm = LLMConfig()
-                                                                                                                                                                        self.knowledge_base = KnowledgeBaseConfig()
-                                                                                                                                                                                self.mesh = MeshConfig()
-                                                                                                                                                                                        self.geometry = GeometryConfig()
-                                                                                                                                                                                                self.simulation = SimulationConfig()
-                                                                                                                                                                                                        self.batch = BatchConfig()
-                                                                                                                                                                                                                self.output = OutputConfig()
+        config = cls()
 
-                                                                                                                                                                                                                        if config_path:
-                                                                                                                                                                                                                                    self.load(config_path)
-                                                                                                                                                                                                                                            self._resolve_env_vars()
+        if "llm" in data:
+            for k, v in data["llm"].items():
+                if hasattr(config.llm, k):
+                    setattr(config.llm, k, v)
 
-                                                                                                                                                                                                                                                def load(self, config_path: str):
-                                                                                                                                                                                                                                                        """Load configuration from YAML file."""
-                                                                                                                                                                                                                                                                path = Path(config_path)
-                                                                                                                                                                                                                                                                        if not path.exists():
-                                                                                                                                                                                                                                                                                    raise FileNotFoundError(f"Config file not found: {config_path}")
+        if "geometry" in data:
+            for k, v in data["geometry"].items():
+                if hasattr(config.geometry, k):
+                    setattr(config.geometry, k, v)
 
-                                                                                                                                                                                                                                                                                            with open(path) as f:
-                                                                                                                                                                                                                                                                                                        raw = yaml.safe_load(f)
+        if "mesh" in data:
+            for k, v in data["mesh"].items():
+                if hasattr(config.mesh, k):
+                    setattr(config.mesh, k, v)
 
-                                                                                                                                                                                                                                                                                                                if "llm" in raw:
-                                                                                                                                                                                                                                                                                                                            for k, v in raw["llm"].items():
-                                                                                                                                                                                                                                                                                                                                            if hasattr(self.llm, k):
-                                                                                                                                                                                                                                                                                                                                                                setattr(self.llm, k, v)
+        if "simulation" in data:
+            for k, v in data["simulation"].items():
+                if hasattr(config.simulation, k):
+                    setattr(config.simulation, k, v)
 
-                                                                                                                                                                                                                                                                                                                                                                        if "knowledge_base" in raw:
-                                                                                                                                                                                                                                                                                                                                                                                    for k, v in raw["knowledge_base"].items():
-                                                                                                                                                                                                                                                                                                                                                                                                    if hasattr(self.knowledge_base, k):
-                                                                                                                                                                                                                                                                                                                                                                                                                        setattr(self.knowledge_base, k, v)
+        if "analysis" in data:
+            for k, v in data["analysis"].items():
+                if hasattr(config.analysis, k):
+                    setattr(config.analysis, k, v)
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                if "meshing" in raw:
-                                                                                                                                                                                                                                                                                                                                                                                                                                            if "levels" in raw["meshing"]:
-                                                                                                                                                                                                                                                                                                                                                                                                                                                            self.mesh.levels = {
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                name: MeshLevelConfig(**params)
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    for name, params in raw["meshing"]["levels"].items()
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    }
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                for k in ["backend", "default_level", "element_type"]:
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                if k in raw["meshing"]:
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    setattr(self.mesh, k, raw["meshing"][k])
+        if "batch" in data:
+            for k, v in data["batch"].items():
+                if hasattr(config.batch, k):
+                    setattr(config.batch, k, v)
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            if "geometry" in raw:
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        geo = raw["geometry"]
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    self.geometry.output_format = geo.get("output_format", "step")
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                self.geometry.freecad_path = geo.get("freecad_path")
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            if "validation" in geo:
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            self.geometry.tolerance_mm = geo["validation"].get("tolerance_mm", 0.1)
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        self.geometry.blacklisted_operations = geo.get("blacklisted_operations", [])
+        for key in ["workspace", "log_level", "debug"]:
+            if key in data:
+                setattr(config, key, data[key])
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                if "simulation" in raw:
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            for k, v in raw["simulation"].items():
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            if hasattr(self.simulation, k):
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                setattr(self.simulation, k, v)
+        # Override API key from environment
+        env_key = os.environ.get("GEMINI_API_KEY")
+        if env_key:
+            config.llm.api_key = env_key
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        if "batch" in raw:
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    for k, v in raw["batch"].items():
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    if hasattr(self.batch, k):
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        setattr(self.batch, k, v)
+        return config
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                if "output" in raw:
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            for k, v in raw["output"].items():
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            if hasattr(self.output, k):
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                setattr(self.output, k, v)
+    def setup_logging(self):
+        """Configure logging based on config."""
+        logging.basicConfig(
+            level=getattr(logging, self.log_level.upper()),
+            format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
+        )
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    def _resolve_env_vars(self):
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            """Resolve environment variable references in config values."""
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    if self.llm.api_key.startswith("${") and self.llm.api_key.endswith("}"):
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                env_var = self.llm.api_key[2:-1]
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            self.llm.api_key = os.environ.get(env_var, "")
-
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    if not self.llm.api_key:
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                self.llm.api_key = os.environ.get("GEMINI_API_KEY", "")
-
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    def get_mesh_level(self, level_name: str) -> MeshLevelConfig:
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            """Get mesh level configuration by name."""
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    if level_name in self.mesh.levels:
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                return self.mesh.levels[level_name]
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        return MeshLevelConfig()
+    def validate(self) -> List[str]:
+        """Validate configuration. Returns list of warnings."""
+        warnings = []
+        if not self.llm.api_key:
+            warnings.append(
+                "No LLM API key set. Set GEMINI_API_KEY env var."
+            )
+        if self.simulation.solver == "CalculiX":
+            import shutil
+            if not shutil.which(self.simulation.calculix_path):
+                warnings.append(
+                    f"CalculiX not found at: "
+                    f"{self.simulation.calculix_path}"
+                )
+        return warnings
