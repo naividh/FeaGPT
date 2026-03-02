@@ -54,9 +54,6 @@ class GeometryGenerator:
         code = geo.get("naca_code", "0012")
         chord = geo.get("chord_mm", 200.0)
         span = geo.get("span_mm", 200.0)
-        _shell_t = geo.get("shell_thickness_mm", 1.5)
-        _n_spars = geo.get("num_spars", 2)
-        _n_ribs = geo.get("num_ribs", 2)
         m = int(code[0]) / 100.0
         p_val = int(code[1]) / 10.0
         t_max = int(code[2:]) / 100.0
