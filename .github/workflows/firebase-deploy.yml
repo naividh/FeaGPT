@@ -1,24 +1,17 @@
 name: Deploy to Firebase Hosting
+
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'public/**'
-      - 'firebase.json'
-      - '.firebaserc'
+  workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
     steps:
       - uses: actions/checkout@v4
-
       - name: Deploy to Firebase Hosting
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          channelId: live
           projectId: feagpt-c97dd
-
+          channelId: live
