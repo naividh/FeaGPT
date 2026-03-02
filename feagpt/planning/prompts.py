@@ -5,169 +5,92 @@ Contains structured prompts for engineering analysis planning,
 material retrieval, and task orchestration via Gemini 2.5 Pro.
 """
 
-ANALYSIS_PLANNING_PROMPT = """You are FeaGPT, an expert finite element analysis engineer.
-Analyze the following engineering description and produce a structured JSON specification
-for FEA simulation.
+ANALYSIS_PLANNING_PROMPT = (
+    "You are FeaGPT, an expert finite element analysis engineer.\n"
+    "Analyze the following engineering description and produce a structured JSON\n"
+    "specification for FEA simulation.\n"
+    "\n"
+    "## Engineering Description\n"
+    "{description}\n"
+    "\n"
+    "## Retrieved Material Data (from knowledge base)\n"
+    "{material_context}\n"
+    "\n"
+    "## Retrieved Solver Configurations\n"
+    "{solver_context}\n"
+    "\n"
+    "## Instructions\n"
+    "Parse the engineering description and output a complete JSON specification:\n"
+    "\n"
+    "1. material: Material name and properties (use retrieved data if available)\n"
+    "2. loads: List of load conditions with type, magnitude, direction, location\n"
+    "3. boundary_conditions: Constraints with type, location, and DOF constraints\n"
+    "4. mesh: Density level (ultra_fine/fine/medium/coarse)\n"
+    "5. geometry: Shape type and dimensions\n"
+    "6. parameters: Any parametric study ranges\n"
+    "7. analysis_objectives: What to compute (stress, displacement, fatigue, etc.)\n"
+    "\n"
+    "Output ONLY valid JSON, no markdown or explanation.\n"
+)
 
-## Engineering Description
-{description}
 
-## Retrieved Material Data (from knowledge base)
-{material_context}
+GEOMETRY_SYNTHESIS_PROMPT = (
+    "You are a FreeCAD geometry generation expert.\n"
+    "Generate a Python script that creates the specified geometry using FreeCAD.\n"
+    "\n"
+    "## Geometry Specification\n"
+    "{geometry_spec}\n"
+    "\n"
+    "## Requirements\n"
+    "- Use FreeCAD Part module for 3D geometry\n"
+    "- Export as STEP file to: {output_path}\n"
+    "- Include proper units (all dimensions in mm)\n"
+    "- Add fillets and chamfers if specified\n"
+    "- Script must be executable standalone\n"
+    "\n"
+    "Output ONLY the Python script, no markdown or explanation.\n"
+)
 
-## Retrieved Solver Configurations
-{solver_context}
 
-## Instructions
-Parse the engineering description and output a complete JSON specification with these fields:
+RESULT_INTERPRETATION_PROMPT = (
+    "You are an FEA results interpretation expert.\n"
+    "Analyze the following simulation results and provide engineering insights.\n"
+    "\n"
+    "## Simulation Results\n"
+    "{results_data}\n"
+    "\n"
+    "## Analysis Objectives\n"
+    "{objectives}\n"
+    "\n"
+    "## Instructions\n"
+    "Provide a structured JSON analysis with:\n"
+    "1. summary: Brief overall assessment\n"
+    "2. critical_points: List of stress concentrations or failure risks\n"
+    "3. safety_factors: Computed safety factors for each objective\n"
+    "4. recommendations: Design improvement suggestions\n"
+    "5. confidence: Assessment confidence level (high/medium/low)\n"
+    "\n"
+    "Output ONLY valid JSON.\n"
+)
 
-1. **material**: Material name and properties (use retrieved data if available)
-2. **loads**: List of load conditions with type, magnitude, direction, semantic location
-3. **boundary_conditions**: Constraints with type, semantic location, and DOF constraints
-4. **mesh**: Density level (ultra_fine/fine/medium/coarse), element type, refinement zones
-5. **analysis**: Analysis type and solver settings
-6. **data_analysis**: Optimization objectives, metrics, and analysis mode
-7. **parameters**: If parametric study, define parameter ranges with min/max/step
-8. **geometry**: Geometric specifications from the description
 
-## Important Rules
-- Locations must be SEMANTIC (e.g., "left edge", "wing root", "hole boundary")
-- For aerospace applications, default material is Al-7075-T6 unless specified
-- Infer appropriate loading from context
-- For parametric studies, expand all parameter ranges
-- Output ONLY valid JSON, no markdown or commentary
-
-## Output Format
-```json
-{{
-  "material": {{
-      "name": "string",
-          "youngs_modulus": number,
-              "poissons_ratio": number,
-                  "density": number,
-                      "yield_strength": number
-                        }},
-                          "geometry": {{
-                              "type": "string",
-                                  "parameters": {{}}
-                                    }},
-                                      "loads": [
-                                          {{
-                                                "type": "force|pressure|centrifugal",
-                                                      "magnitude": number,
-                                                            "direction": "X|Y|Z|-X|-Y|-Z",
-                                                                  "location": "semantic location string",
-                                                                        "distribution": "point|distributed|pressure"
-                                                                            }}
-                                                                              ],
-                                                                                "boundary_conditions": [
-                                                                                    {{
-                                                                                          "type": "fixed|pinned|roller|symmetry",
-                                                                                                "location": "semantic location string",
-                                                                                                      "constraints": ["X", "Y", "Z"]
-                                                                                                          }}
-                                                                                                            ],
-                                                                                                              "mesh": {{
-                                                                                                                  "density": "fine",
-                                                                                                                      "element_type": "C3D10",
-                                                                                                                          "refinement_zones": ["stress concentration areas"]
-                                                                                                                            }},
-                                                                                                                              "analysis": {{
-                                                                                                                                  "type": "static|frequency|buckling|prestressed_modal",
-                                                                                                                                      "solver": "CalculiX"
-                                                                                                                                        }},
-                                                                                                                                          "data_analysis": {{
-                                                                                                                                              "objectives": ["minimize stress", "minimize weight"],
-                                                                                                                                                  "metrics": ["von_mises_stress", "displacement", "mass"],
-                                                                                                                                                      "optimization": "single|parametric|pareto_front"
-                                                                                                                                                        }},
-                                                                                                                                                          "parameters": {{
-                                                                                                                                                              "param_name": {{
-                                                                                                                                                                    "min": number,
-                                                                                                                                                                          "max": number,
-                                                                                                                                                                                "step": number
-                                                                                                                                                                                    }}
-                                                                                                                                                                                      }}
-                                                                                                                                                                                      }}
-                                                                                                                                                                                      ```
-                                                                                                                                                                                      """
-                                                                                                                                                                                      
-                                                                                                                                                                                      GEOMETRY_SYNTHESIS_PROMPT = """You are a FreeCAD geometry generation expert.
-                                                                                                                                                                                      Generate a Python script using FreeCAD's Part module to create the following geometry.
-                                                                                                                                                                                      
-                                                                                                                                                                                      ## Geometry Requirements
-                                                                                                                                                                                      {geometry_spec}
-                                                                                                                                                                                      
-                                                                                                                                                                                      ## Constraints
-                                                                                                                                                                                      - Use only FreeCAD and Part module imports
-                                                                                                                                                                                      - Export as STEP file to: {output_path}
-                                                                                                                                                                                      - All dimensions in millimeters
-                                                                                                                                                                                      - Ensure closed solid volumes
-                                                                                                                                                                                      - Use boolean operations for complex shapes
-                                                                                                                                                                                      - Include proper fillets where specified
-                                                                                                                                                                                      
-                                                                                                                                                                                      ## Example Pattern
-                                                                                                                                                                                      ```python
-                                                                                                                                                                                      import FreeCAD
-                                                                                                                                                                                      import Part
-                                                                                                                                                                                      
-                                                                                                                                                                                      # Create geometry
-                                                                                                                                                                                      doc = FreeCAD.newDocument("Geometry")
-                                                                                                                                                                                      
-                                                                                                                                                                                      # ... geometry creation code ...
-                                                                                                                                                                                      
-                                                                                                                                                                                      # Export
-                                                                                                                                                                                      shape = doc.Objects[-1].Shape
-                                                                                                                                                                                      Part.export([doc.Objects[-1]], "{output_path}")
-                                                                                                                                                                                      ```
-                                                                                                                                                                                      
-                                                                                                                                                                                      Generate ONLY the Python code, no explanations.
-                                                                                                                                                                                      """
-                                                                                                                                                                                      
-                                                                                                                                                                                      RESULT_INTERPRETATION_PROMPT = """You are an FEA results interpretation expert.
-                                                                                                                                                                                      Analyze the following simulation results and provide engineering insights.
-                                                                                                                                                                                      
-                                                                                                                                                                                      ## Simulation Summary
-                                                                                                                                                                                      {results_summary}
-                                                                                                                                                                                      
-                                                                                                                                                                                      ## Material Properties
-                                                                                                                                                                                      {material_info}
-                                                                                                                                                                                      
-                                                                                                                                                                                      ## Analysis Objectives
-                                                                                                                                                                                      {objectives}
-                                                                                                                                                                                      
-                                                                                                                                                                                      Provide:
-                                                                                                                                                                                      1. Safety assessment (stress vs yield strength)
-                                                                                                                                                                                      2. Critical locations and failure modes
-                                                                                                                                                                                      3. Design recommendations
-                                                                                                                                                                                      4. If parametric: identify optimal configurations
-                                                                                                                                                                                      
-                                                                                                                                                                                      Output in structured JSON format.
-                                                                                                                                                                                      """
-                                                                                                                                                                                      
-                                                                                                                                                                                      DATA_ANALYSIS_PROMPT = """You are a data analysis expert for FEA parametric studies.
-                                                                                                                                                                                      Given the following parametric study results, determine the best analysis approach.
-                                                                                                                                                                                      
-                                                                                                                                                                                      ## Study Description
-                                                                                                                                                                                      {study_description}
-                                                                                                                                                                                      
-                                                                                                                                                                                      ## Available Data
-                                                                                                                                                                                      - Number of configurations: {n_configs}
-                                                                                                                                                                                      - Parameters: {parameters}
-                                                                                                                                                                                      - Metrics: {metrics}
-                                                                                                                                                                                      - User objectives: {objectives}
-                                                                                                                                                                                      
-                                                                                                                                                                                      Select the most appropriate analysis methods from:
-                                                                                                                                                                                      - pareto: Multi-objective Pareto optimization
-                                                                                                                                                                                      - sensitivity: Parameter correlation analysis
-                                                                                                                                                                                      - fatigue: S-N curve fatigue life assessment
-                                                                                                                                                                                      - surrogate: Surrogate model for interpolation
-                                                                                                                                                                                      - clustering: Pattern recognition in results
-                                                                                                                                                                                      
-                                                                                                                                                                                      Output a JSON with:
-                                                                                                                                                                                      {{
-                                                                                                                                                                                        "primary_method": "string",
-                                                                                                                                                                                          "secondary_methods": ["string"],
-                                                                                                                                                                                            "reasoning": "string"
-                                                                                                                                                                                            }}
-                                                                                                                                                                                            """}}]]
+DATA_ANALYSIS_PROMPT = (
+    "You are a data analysis expert for FEA parametric studies.\n"
+    "Analyze the following batch simulation results.\n"
+    "\n"
+    "## Parametric Study Results\n"
+    "{batch_results}\n"
+    "\n"
+    "## Parameter Space\n"
+    "{parameter_space}\n"
+    "\n"
+    "## Instructions\n"
+    "Provide a structured JSON analysis with:\n"
+    "1. trends: Key parameter-response relationships\n"
+    "2. sensitivities: Which parameters most affect each objective\n"
+    "3. optimal_configs: Best configurations found\n"
+    "4. pareto_front: Non-dominated solutions for multi-objective\n"
+    "5. recommendations: Suggested next steps or refined parameter ranges\n"
+    "\n"
+    "Output ONLY valid JSON.\n"
+)
