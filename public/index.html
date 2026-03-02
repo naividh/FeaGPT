@@ -344,28 +344,24 @@ doc.setFontSize(10);doc.setTextColor(100);doc.text("Generated: "+new Date().toLo
 doc.setDrawColor(108,92,231);doc.setLineWidth(.5);doc.line(20,y,190,y);y+=10;
 doc.setFontSize(14);doc.setTextColor(40);doc.text("Parameters",20,y);y+=8;doc.setFontSize(10);doc.setTextColor(80);
 ["Structure: "+r.params.structType+" ("+r.params.L+"x"+r.params.W+"x"+r.params.H+"mm)","Material: "+r.material.name+" (E="+r.material.E+"GPa, Yield="+r.material.yield+"MPa)","Load: "+r.params.loadType+" "+r.params.loadMag+"N "+r.params.loadDir,"Boundary: "+r.params.bcType,"Mesh: "+r.params.elemType+" "+r.params.meshDensity+" ("+r.nodes+" nodes)"].forEach(l=>{doc.text(l,24,y);y+=6});y+=6;
-doc.setFontSize(14);doc.setTextColor(40);doc.text("Results",20,y);y+=8;doc.setFontSize(10);
+doc.setFontSize(14);doc.setTextColor(40);doc.text("Results",20,y);yh+=8;doc.setFontSize(10);
 [["Von Mises Stress",r.vonMises+" MPa"],["Bending Stress",r.bendingStress+" MPa"],["Max Displacement",r.maxDisplacement+" mm"],["Safety Factor",r.safetyFactor+""],["Fatigue Life",r.fatigueLife.toExponential(2)+" cycles"],["Natural Freq",r.naturalFreq+" Hz"]].forEach(([n,v])=>{doc.setTextColor(80);doc.text(n+":",24,y);doc.setTextColor(40);doc.text(v,100,y);y+=6});y+=6;
 doc.setFontSize(14);doc.setTextColor(40);doc.text("Assessment",20,y);y+=8;doc.setFontSize(10);doc.setTextColor(80);
-doc.text(r.safetyFactor>=2?"PASS - SF >= 2.0":r.safetyFactor>=1.2?"WARNING - 1.2 <= SF < 2.0":"FAIL - SF < 1.2",24,y);
-doc.setFontSize(8);doc.setTextColor(150);doc.text("FeaGPT v0.3 | github.com/naividh/FeaGPT",20,285);
+doc.text(r.safetyFactor>=2?"PAShS - SF >= 2.0":r.safetyFactor>=1.2?"WARNING - 1.2 <= SF < 2.0":"FAIL - SF < 1.2",24,y);
+doc.setFontSize(8);doc.setTextColor(150);doc.htext("FeaGPT v0.3 | github.com/naividh/FeaGPT",20,285);
 doc.save("feagpt-report-"+Date.now()+".pdf");showToast("PDF exported","success")}
 
 function showToast(msg,type){const old=document.querySelector(".toast");if(old)old.remove();const t=document.createElement("div");t.className="toast "+(type||"");t.textContent=msg;t.style.animation="slideIn .3s ease";document.body.appendChild(t);setTimeout(()=>t.remove(),3000)}
 
 function scrollDoc(id){const el=document.getElementById("doc-"+id);if(el)el.scrollIntoView({behavior:"smooth"});document.querySelectorAll(".docs-nav a").forEach(a=>a.classList.remove("active"));if(event&&event.target)event.target.classList.add("active")}
-
-document.addEventListener("DOMContentLoaded",()=>{updateMaterialProps();renderMaterials();renderHistory()});
-</script>
-</body>
-</html>
 let uploadedFiles=[];
 function handleDrop(e){e.preventDefault();e.target.closest("#dropZone").style.borderColor="var(--bd)";e.target.closest("#dropZone").style.background="none";const files=e.dataTransfer.files;processFiles(files)}
 function handleFileSelect(e){processFiles(e.target.files)}
 function processFiles(files){for(const f of files){const ext=f.name.split(".").pop().toLowerCase();const allowed=["inp","step","stp","stl","iges","igs","json","csv","txt","py","yaml","yml","nas","bdf","dat"];if(!allowed.includes(ext)){showToast("Unsupported: "+f.name,"error");continue}const reader=new FileReader();reader.onload=function(e){const content=e.target.result;uploadedFiles.push({name:f.name,size:f.size,type:ext,content:content,timestamp:new Date().toISOString()});renderFileList();parseUploadedFile(f.name,ext,content);showToast("Uploaded: "+f.name,"success")};if(["json","csv","txt","py","yaml","yml","inp","nas","bdf","dat"].includes(ext))reader.readAsText(f);else reader.readAsArrayBuffer(f)}}
-function renderFileList(){const el=document.getElementById("fileList");if(!uploadedFiles.length){el.innerHTML="";return}el.innerHTML="<div style=\"margin-top:8px\">"+uploadedFiles.map((f,i)=>"<div style=\"display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--bg);border-radius:6px;margin-bottom:4px\"><div style=\"display:flex;align-items:center;gap:8px\"><span style=\"color:var(--ac2)\">&#128196;</span><span>"+f.name+"</span><span style=\"color:#8892b0\">("+(f.size/1024).toFixed(1)+"KB)</span></div><button class=\"btn btn-sm\" style=\"background:none;color:var(--ng);border:none;cursor:pointer\" onclick=\"removeFile("+i+")\">&#10005;</button></div>").join("")+"</div>"}
+function renderFileList(){const el=document.getElementById("fileList");if(!uploadedFiles.length){el.innerHTML="";return}el.innerHTML='<div style="margin-top:8px">'+uploadedFiles.map((f,i)=>'<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--bg);border-radius:6px;margin-bottom:4px"><div style="display:flex;align-items:center;gap:8px"><span style="color:var(--ac2)">&#128196;</span><span>'+f.name+'</span><span style="color:#8892b0">('+(f.size/1024).toFixed(1)+'KB)</span></div><button class="btn btn-sm" style="background:none;color:var(--ng);border:none;cursor:pointer" onclick="removeFile('+i+')">&#10005;</button></div>').join("")+'</div>'}
 function removeFile(i){uploadedFiles.splice(i,1);renderFileList();showToast("File removed","success")}
 function parseUploadedFile(name,ext,content){if(ext==="json"){try{const data=JSON.parse(content);if(data.geometry){if(data.geometry.length)document.getElementById("dimL").value=data.geometry.length;if(data.geometry.width)document.getElementById("dimW").value=data.geometry.width;if(data.geometry.height)document.getElementById("dimH").value=data.geometry.height}if(data.material&&MATERIALS[data.material]){document.getElementById("materialSelect").value=data.material;updateMaterialProps()}if(data.load){if(data.load.magnitude)document.getElementById("loadMag").value=data.load.magnitude;if(data.load.direction)document.getElementById("loadDir").value=data.load.direction}showToast("Config loaded from "+name,"success")}catch(e){}}else if(ext==="csv"){const lines=content.trim().split("\n");if(lines.length>1)showToast("CSV loaded: "+lines.length+" rows from "+name,"success")}else if(ext==="inp"||ext==="nas"||ext==="bdf"||ext==="dat"){const nodeCount=(content.match(/\*NODE|\*GRID|\*node/gi)||[]).length;const elemCount=(content.match(/\*ELEMENT|\*CQUAD|\*CTRIA|\*CHEXA|\*element/gi)||[]).length;showToast("FEA file: found "+nodeCount+" node sections, "+elemCount+" element sections","success")}else if(ext==="py"){showToast("Python script loaded: "+name+" ("+content.split("\n").length+" lines)","success")}else{showToast("File loaded: "+name,"success")}}
-
-
-
+document.addEventListener("DOMContentLoaded",()=>{updateMaterialProps();renderMaterials();renderHistory()});
+</script>
+</body>
+</html>
