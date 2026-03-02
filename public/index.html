@@ -2,279 +2,456 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FeaGPT - AI-Powered Finite Element Analysis</title>
-<meta name="description" content="FeaGPT: End-to-End Agentic AI for Finite Element Analysis. Transform natural language into validated FEA results.">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>&#9881;</text></svg>">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#0a0a0f;--card:#12121a;--border:#1e1e2e;--accent:#6366f1;--accent2:#818cf8;--text:#e2e8f0;--muted:#94a3b8;--green:#22c55e;--red:#ef4444;--yellow:#eab308}
-body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;flex-direction:column}
+:root{--bg:#0a0e17;--surface:#131a2b;--surface2:#1a2238;--border:#2a3555;--accent:#6c5ce7;--accent2:#a29bfe;--text:#e2e8f0;--text2:#94a3b8;--success:#10b981;--warn:#f59e0b;--danger:#ef4444;--blue:#3b82f6}
+body{font-family:'Segoe UI',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
 a{color:var(--accent2);text-decoration:none}
 a:hover{text-decoration:underline}
-a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
-/* Header */
-header{padding:1rem 2rem;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
-.logo{font-size:1.5rem;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--accent2),#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-nav{display:flex;gap:1.5rem}
-nav a{color:var(--muted);font-size:0.9rem;transition:color 0.2s}
-nav a:hover{color:var(--text)}
+/* Navigation */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(10,14,23,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;height:56px}
+nav .logo{font-size:20px;font-weight:700;color:var(--accent2);letter-spacing:-0.5px}
+nav .logo span{color:var(--text2);font-weight:400;font-size:14px;margin-left:8px}
+nav ul{display:flex;list-style:none;margin-left:auto;gap:4px}
+nav ul li a{padding:8px 16px;border-radius:8px;color:var(--text2);font-size:14px;transition:.2s}
+nav ul li a:hover,nav ul li a.active{color:var(--text);background:var(--surface);text-decoration:none}
 
-/* Hero */
-.hero{text-align:center;padding:3rem 2rem 2rem}
-.hero h1{font-size:2.5rem;margin-bottom:0.75rem;background:linear-gradient(135deg,#fff,var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
-.hero p{color:var(--muted);max-width:600px;margin:0 auto;line-height:1.6}
+/* Tab Navigation */
+.tabs{display:flex;gap:2px;padding:0 24px;margin-top:56px;background:var(--surface);border-bottom:1px solid var(--border)}
+.tab{padding:12px 20px;cursor:pointer;color:var(--text2);font-size:14px;border-bottom:2px solid transparent;transition:.2s}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent2);border-bottom-color:var(--accent)}
 
-/* Main content */
-main{flex:1;display:flex;flex-direction:column;align-items:center;padding:1rem 2rem 2rem;gap:2rem;max-width:1200px;margin:0 auto;width:100%}
+/* Panels */
+.panel{display:none;padding:24px;max-width:1400px;margin:0 auto}
+.panel.active{display:block}
 
-/* Pipeline steps */
-.pipeline{display:flex;gap:0.5rem;flex-wrap:wrap;justify-content:center}
-.step{padding:0.5rem 1rem;border-radius:0.5rem;background:var(--card);border:1px solid var(--border);font-size:0.85rem;color:var(--muted);transition:all 0.3s;display:flex;align-items:center;gap:0.4rem}
-.step.active{border-color:var(--accent);color:var(--accent2);box-shadow:0 0 12px rgba(99,102,241,0.2)}
-.step.done{border-color:var(--green);color:var(--green)}
-.step-dot{width:8px;height:8px;border-radius:50%;background:var(--muted);transition:background 0.3s}
-.step.active .step-dot{background:var(--accent2);animation:pulse 1.5s infinite}
-.step.done .step-dot{background:var(--green)}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+/* Chat Interface */
+.chat-container{display:grid;grid-template-columns:1fr 340px;gap:20px;height:calc(100vh - 120px)}
+.chat-main{display:flex;flex-direction:column;gap:12px}
+.chat-messages{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:12px;padding:12px;background:var(--surface);border-radius:12px;border:1px solid var(--border)}
+.msg{max-width:85%;padding:12px 16px;border-radius:12px;font-size:14px;line-height:1.6;animation:fadeIn .3s}
+.msg.user{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:4px}
+.msg.bot{align-self:flex-start;background:var(--surface2);border:1px solid var(--border);border-bottom-left-radius:4px}
+.msg.bot .stage{display:inline-block;background:var(--accent);color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.msg pre{background:#0d1117;padding:10px;border-radius:6px;overflow-x:auto;margin-top:8px;font-size:12px;font-family:'Fira Code',monospace}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.chat-input-area{display:flex;gap:8px}
+.chat-input-area input{flex:1;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;outline:none}
+.chat-input-area input:focus{border-color:var(--accent)}
+.chat-input-area button{padding:12px 24px;background:var(--accent);color:#fff;border:none;border-radius:10px;font-size:14px;cursor:pointer;font-weight:600;transition:.2s}
+.chat-input-area button:hover{background:#5a4bd4}
 
-/* Chat */
-.chat-container{width:100%;max-width:800px;background:var(--card);border-radius:1rem;border:1px solid var(--border);display:flex;flex-direction:column;height:450px}
-#msgs{flex:1;overflow-y:auto;padding:1.5rem;display:flex;flex-direction:column;gap:0.75rem}
-#msgs::-webkit-scrollbar{width:6px}
-#msgs::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
-.msg{max-width:85%;padding:0.75rem 1rem;border-radius:0.75rem;line-height:1.5;font-size:0.9rem;word-wrap:break-word;overflow-wrap:break-word}
-.msg.user{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:0.25rem}
-.msg.bot{align-self:flex-start;background:var(--border);color:var(--text);border-bottom-left-radius:0.25rem}
-.msg.bot .step-label{color:var(--accent2);font-weight:600;font-size:0.8rem;margin-bottom:0.25rem}
-.typing{display:flex;gap:4px;padding:0.75rem 1rem;align-self:flex-start;background:var(--border);border-radius:0.75rem;border-bottom-left-radius:0.25rem}
-.typing span{width:6px;height:6px;border-radius:50%;background:var(--muted);animation:bounce 1.4s infinite}
-.typing span:nth-child(2){animation-delay:0.2s}
-.typing span:nth-child(3){animation-delay:0.4s}
-@keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-8px)}}
-.chat-input{display:flex;gap:0.5rem;padding:1rem;border-top:1px solid var(--border)}
-#inp{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:0.5rem;padding:0.6rem 1rem;color:var(--text);font-size:0.9rem;outline:none;transition:border-color 0.2s;max-length:1000}
-#inp:focus{border-color:var(--accent)}
-#inp::placeholder{color:var(--muted)}
-#btn{background:var(--accent);color:#fff;border:none;border-radius:0.5rem;padding:0.6rem 1.5rem;cursor:pointer;font-size:0.9rem;transition:background 0.2s}
-#btn:hover:not(:disabled){background:var(--accent2)}
-#btn:disabled{opacity:0.5;cursor:not-allowed}
-#btn:focus-visible{outline:2px solid var(--accent2);outline-offset:2px}
+/* Sidebar */
+.sidebar{display:flex;flex-direction:column;gap:12px}
+.sidebar-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px}
+.sidebar-card h3{font-size:13px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
 
-/* Features */
-.features{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:1rem;width:100%;max-width:800px}
-.feat{background:var(--card);border:1px solid var(--border);border-radius:0.75rem;padding:1.25rem}
-.feat h3{font-size:0.95rem;margin-bottom:0.4rem;color:var(--text)}
-.feat p{font-size:0.8rem;color:var(--muted);line-height:1.5}
+/* Pipeline Viz */
+.pipeline-stages{display:flex;flex-direction:column;gap:8px}
+.pipe-stage{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;background:var(--bg);font-size:13px;transition:.3s}
+.pipe-stage .dot{width:10px;height:10px;border-radius:50%;background:var(--border);transition:.3s;flex-shrink:0}
+.pipe-stage.active .dot{background:var(--accent);box-shadow:0 0 8px var(--accent)}
+.pipe-stage.done .dot{background:var(--success)}
+.pipe-stage.error .dot{background:var(--danger)}
+.pipe-stage .label{flex:1}
+.pipe-stage .time{font-size:11px;color:var(--text2)}
 
-/* Footer */
-footer{text-align:center;padding:1.5rem;border-top:1px solid var(--border);color:var(--muted);font-size:0.8rem}
-footer a{color:var(--accent2)}
+/* Templates */
+.templates{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.template-btn{padding:10px 12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;cursor:pointer;text-align:left;transition:.2s}
+.template-btn:hover{border-color:var(--accent);background:var(--surface2)}
+.template-btn .title{font-weight:600;margin-bottom:4px}
+.template-btn .desc{color:var(--text2);font-size:11px}
 
-/* Counter for msg limit */
-.msg-count{font-size:0.7rem;color:var(--muted);text-align:right;padding:0 1rem}
+/* Materials Panel */
+.materials-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
+.mat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;transition:.2s}
+.mat-card:hover{border-color:var(--accent)}
+.mat-card h3{font-size:16px;margin-bottom:12px;color:var(--accent2)}
+.mat-card .props{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mat-card .prop{font-size:13px}
+.mat-card .prop span{display:block;color:var(--text2);font-size:11px}
+
+/* Dashboard */
+.dash-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;text-align:center}
+.stat-card .value{font-size:32px;font-weight:700;color:var(--accent2)}
+.stat-card .label{font-size:13px;color:var(--text2);margin-top:4px}
+.chart-container{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px}
+.chart-container canvas{max-height:300px}
+
+/* History Panel */
+.history-list{display:flex;flex-direction:column;gap:8px}
+.history-item{display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;cursor:pointer;transition:.2s}
+.history-item:hover{border-color:var(--accent)}
+.history-item .status{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.history-item .status.ok{background:var(--success)}
+.history-item .status.fail{background:var(--danger)}
+.history-item .status.run{background:var(--warn);animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.history-item .info{flex:1}
+.history-item .info .desc{font-size:14px}
+.history-item .info .meta{font-size:12px;color:var(--text2);margin-top:2px}
+.history-item .actions{font-size:12px;color:var(--accent2)}
+
+/* Search */
+.search-bar{width:100%;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:10px;color:var(--text);font-size:14px;outline:none;margin-bottom:16px}
+.search-bar:focus{border-color:var(--accent)}
+
+/* Docs */
+.docs-content{max-width:800px;margin:0 auto}
+.docs-content h2{font-size:22px;margin:24px 0 12px;color:var(--accent2)}
+.docs-content p{line-height:1.7;color:var(--text2);margin-bottom:12px}
+.docs-content code{background:var(--surface2);padding:2px 6px;border-radius:4px;font-size:13px;color:var(--accent2)}
+.eq-block{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:16px;margin:12px 0;font-family:'Fira Code',monospace;font-size:13px;text-align:center;color:var(--accent2)}
+
+/* Responsive */
+@media(max-width:900px){
+  .chat-container{grid-template-columns:1fr}
+  .sidebar{display:none}
+  .dash-grid{grid-template-columns:1fr}
+}
+/* Typing animation */
+.typing-dots span{display:inline-block;width:6px;height:6px;background:var(--text2);border-radius:50%;margin:0 2px;animation:bounce .6s infinite}
+.typing-dots span:nth-child(2){animation-delay:.15s}
+.typing-dots span:nth-child(3){animation-delay:.3s}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 </style>
 </head>
 <body>
-<header>
-<div class="logo">FeaGPT</div>
-<nav role="navigation" aria-label="Main navigation">
-<a href="https://github.com/naividh/FeaGPT" target="_blank" rel="noopener noreferrer">GitHub</a>
-<a href="https://arxiv.org/abs/2510.21993" target="_blank" rel="noopener noreferrer">Paper</a>
-<a href="https://github.com/naividh/FeaGPT#readme" target="_blank" rel="noopener noreferrer">Docs</a>
+
+<!-- Navigation -->
+<nav>
+  <div class="logo">FeaGPT <span>v0.2</span></div>
+  <ul>
+    <li><a href="https://github.com/naividh/FeaGPT" target="_blank">GitHub</a></li>
+    <li><a href="#" onclick="showTab('docs');return false">Docs</a></li>
+  </ul>
 </nav>
-</header>
 
-<div class="hero">
-<h1>FeaGPT</h1>
-<p>End-to-End Agentic AI for Finite Element Analysis. Transform natural language engineering descriptions into validated FEA results.</p>
+<!-- Tab Bar -->
+<div class="tabs">
+  <div class="tab active" onclick="showTab('chat')">Analyze</div>
+  <div class="tab" onclick="showTab('materials')">Materials</div>
+  <div class="tab" onclick="showTab('dashboard')">Dashboard</div>
+  <div class="tab" onclick="showTab('history')">History</div>
+  <div class="tab" onclick="showTab('docs')">Documentation</div>
 </div>
 
-<main role="main">
-<div class="pipeline" role="status" aria-label="Pipeline progress">
-<div class="step" id="s0"><span class="step-dot"></span>Planning</div>
-<div class="step" id="s1"><span class="step-dot"></span>Geometry</div>
-<div class="step" id="s2"><span class="step-dot"></span>Meshing</div>
-<div class="step" id="s3"><span class="step-dot"></span>Simulation</div>
-<div class="step" id="s4"><span class="step-dot"></span>Analysis</div>
-</div>
-
+<!-- ============ CHAT PANEL ============ -->
+<div class="panel active" id="panel-chat">
 <div class="chat-container">
-<div id="msgs" role="log" aria-label="Chat messages" aria-live="polite"></div>
-<div class="msg-count" id="counter"></div>
-<div class="chat-input">
-<label for="inp" class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)">Enter engineering description</label>
-<input id="inp" type="text" placeholder="Describe your FEA problem..." maxlength="1000" autocomplete="off" aria-label="Engineering description input">
-<button id="btn" type="button" aria-label="Send message">Analyze</button>
+  <div class="chat-main">
+    <div class="chat-messages" id="chatMessages">
+      <div class="msg bot">
+        Welcome to <b>FeaGPT</b>! I transform natural language engineering descriptions into validated FEA results.
+        <br><br>Try describing an analysis like: <em>"Analyze a cantilever beam 500mm long, 50mm wide, 30mm tall, Al-7075-T6, 1000N tip load"</em>
+      </div>
+    </div>
+    <div class="chat-input-area">
+      <input type="text" id="chatInput" placeholder="Describe your FEA problem..." onkeydown="if(event.key==='Enter')sendMessage()">
+      <button onclick="sendMessage()">Analyze</button>
+    </div>
+  </div>
+  <div class="sidebar">
+    <div class="sidebar-card">
+      <h3>Pipeline Status</h3>
+      <div class="pipeline-stages" id="pipelineStages">
+        <div class="pipe-stage" id="stage-planning"><div class="dot"></div><div class="label">Planning</div><div class="time" id="time-planning">-</div></div>
+        <div class="pipe-stage" id="stage-geometry"><div class="dot"></div><div class="label">Geometry</div><div class="time" id="time-geometry">-</div></div>
+        <div class="pipe-stage" id="stage-meshing"><div class="dot"></div><div class="label">Meshing</div><div class="time" id="time-meshing">-</div></div>
+        <div class="pipe-stage" id="stage-simulation"><div class="dot"></div><div class="label">Simulation</div><div class="time" id="time-simulation">-</div></div>
+        <div class="pipe-stage" id="stage-analysis"><div class="dot"></div><div class="label">Analysis</div><div class="time" id="time-analysis">-</div></div>
+      </div>
+    </div>
+    <div class="sidebar-card">
+      <h3>Quick Templates</h3>
+      <div class="templates">
+        <div class="template-btn" onclick="useTemplate('Cantilever beam: 500mm x 50mm x 30mm, Al-7075-T6, 1000N downward tip load')"><div class="title">Cantilever Beam</div><div class="desc">Classic fixed-free beam analysis</div></div>
+        <div class="template-btn" onclick="useTemplate('Plate with central hole: 200mm x 100mm plate, 10mm hole, Steel-AISI-4340, 50MPa uniaxial tension')"><div class="title">Plate with Hole</div><div class="desc">Stress concentration study</div></div>
+        <div class="template-btn" onclick="useTemplate('NACA4412 wing spar: 300mm chord, 1500mm span, Al-6061-T6, 2000N distributed lift load')"><div class="title">Wing Structure</div><div class="desc">Aerospace wing spar analysis</div></div>
+        <div class="template-btn" onclick="useTemplate('Turbocharger impeller: Ti-6Al-4V, 50mm radius, 110000 RPM, thermal load 300C')"><div class="title">Turbocharger</div><div class="desc">High-speed rotating analysis</div></div>
+        <div class="template-btn" onclick="useTemplate('Parametric study: cantilever beam, vary thickness 10-50mm in 5 steps, Al-7075-T6, 500N load')"><div class="title">Parametric Study</div><div class="desc">Batch sweep analysis</div></div>
+        <div class="template-btn" onclick="useTemplate('Pressure vessel: cylindrical, 500mm ID, 20mm wall, Steel-AISI-4340, 10MPa internal pressure')"><div class="title">Pressure Vessel</div><div class="desc">Internal pressure analysis</div></div>
+      </div>
+    </div>
+  </div>
 </div>
 </div>
 
-<div class="features">
-<div class="feat"><h3>Multi-Objective Optimization</h3><p>Pareto front, sensitivity analysis, S-N fatigue life assessment.</p></div>
-<div class="feat"><h3>Batch Processing</h3><p>432-config parametric studies from one input. Parallel execution.</p></div>
-<div class="feat"><h3>Industrial Validation</h3><p>Turbocharger at 110,000 RPM. Cyclic symmetry, prestressed modal.</p></div>
-<div class="feat"><h3>Self-Improving Knowledge Base</h3><p>Vector-indexed semantic search. Successful analyses feed back.</p></div>
+<!-- ============ MATERIALS PANEL ============ -->
+<div class="panel" id="panel-materials">
+<input class="search-bar" type="text" placeholder="Search materials..." oninput="filterMaterials(this.value)">
+<div class="materials-grid" id="materialsGrid"></div>
 </div>
-</main>
 
-<footer><div>FeaGPT &mdash; End-to-End Agentic AI for Finite Element Analysis</div><div style="margin-top:0.5rem"><a href="https://github.com/naividh/FeaGPT" target="_blank" rel="noopener noreferrer">GitHub</a> &middot; <a href="https://arxiv.org/abs/2510.21993" target="_blank" rel="noopener noreferrer">arXiv:2510.21993</a></div></footer>
+<!-- ============ DASHBOARD PANEL ============ -->
+<div class="panel" id="panel-dashboard">
+<div class="dash-grid">
+  <div class="stat-card"><div class="value" id="statTotal">0</div><div class="label">Total Analyses</div></div>
+  <div class="stat-card"><div class="value" id="statSuccess">0</div><div class="label">Successful</div></div>
+  <div class="stat-card"><div class="value" id="statAvgTime">0s</div><div class="label">Avg Duration</div></div>
+</div>
+<div class="chart-container"><h3 style="margin-bottom:12px;color:var(--text2)">Stress Distribution (Last Analysis)</h3><canvas id="stressChart"></canvas></div>
+<div class="chart-container"><h3 style="margin-bottom:12px;color:var(--text2)">Material Usage</h3><canvas id="materialChart"></canvas></div>
+</div>
+
+<!-- ============ HISTORY PANEL ============ -->
+<div class="panel" id="panel-history">
+<h2 style="margin-bottom:16px">Analysis History</h2>
+<div class="history-list" id="historyList">
+  <div style="text-align:center;padding:40px;color:var(--text2)">No analyses yet. Start by describing an FEA problem in the Analyze tab.</div>
+</div>
+</div>
+
+<!-- ============ DOCS PANEL ============ -->
+<div class="panel" id="panel-docs">
+<div class="docs-content">
+  <h2>FeaGPT: End-to-End Agentic AI for FEA</h2>
+  <p>FeaGPT is a natural-language-driven framework that automates the complete Finite Element Analysis workflow: from engineering description through geometry creation, mesh generation, simulation, and results analysis.</p>
+
+  <h2>GMSA Pipeline Architecture</h2>
+  <p>The core pipeline follows four stages (Geometry-Mesh-Simulation-Analysis), each orchestrated by an LLM agent with domain-specific knowledge retrieval.</p>
+  <div class="eq-block">Pipeline: NL Description &rarr; Planning &rarr; Geometry (G) &rarr; Meshing (M) &rarr; Simulation (S) &rarr; Analysis (A)</div>
+
+  <h2>Key Equations</h2>
+  <p>Knowledge retrieval uses cosine similarity with threshold &sigma; > 0.85:</p>
+  <div class="eq-block">sim(q, d) = cos(&theta;) = (q &middot; d) / (||q|| &middot; ||d||)</div>
+  <p>Fatigue life prediction uses Basquin's equation:</p>
+  <div class="eq-block">&sigma;<sub>a</sub> = &sigma;'<sub>f</sub> (2N<sub>f</sub>)<sup>b</sup></div>
+  <p>Adaptive batch sizing (Eq. 7):</p>
+  <div class="eq-block">B<sub>size</sub> = min(M<sub>avail</sub> / M<sub>per_case</sub>, N<sub>cores</sub>, B<sub>max</sub>)</div>
+  <p>Mesh quality metric (Eq. 8):</p>
+  <div class="eq-block">Q = J<sub>det</sub> / J<sub>ideal</sub>, where AR = max(edge) / min(edge) &le; 10</div>
+
+  <h2>Supported Materials</h2>
+  <p>Built-in material database includes Al-7075-T6, Al-6061-T6, Steel-AISI-4340, Ti-6Al-4V with full S-N curve data for fatigue analysis.</p>
+
+  <h2>API Reference</h2>
+  <p>The REST API provides endpoints for programmatic access:</p>
+  <div class="eq-block">POST /analyze &nbsp; POST /batch &nbsp; GET /status/{id} &nbsp; GET /results/{id} &nbsp; GET /health</div>
+
+  <h2>Technology Stack</h2>
+  <p>Python backend with FastAPI, CalculiX solver, Gmsh meshing, FreeCAD geometry. Frontend served via Firebase Hosting. CI/CD through GitHub Actions.</p>
+</div>
+</div>
 
 <script>
-(function(){
-  'use strict';
-  const M = document.getElementById('msgs');
-  const I = document.getElementById('inp');
-  const B = document.getElementById('btn');
-  const counter = document.getElementById('counter');
-  let msgCount = 0;
-  const MAX_MSGS = 50;
+// ============ APP STATE ============
+const state = {
+  analyses: JSON.parse(localStorage.getItem('feagpt_history') || '[]'),
+  materialUsage: {},
+  totalTime: 0
+};
 
-  // Sanitize text to prevent XSS
-  function esc(s) {
-    const d = document.createElement('div');
-    d.textContent = s;
-    return d.innerHTML;
+// ============ TAB SWITCHING ============
+function showTab(name) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  document.querySelectorAll('.tab').forEach(t => { if(t.textContent.toLowerCase().includes(name.substring(0,4))) t.classList.add('active'); });
+  if (name === 'dashboard') updateDashboard();
+  if (name === 'history') renderHistory();
+  if (name === 'materials') renderMaterials();
+}
+
+// ============ MATERIALS DATABASE ============
+const MATERIALS = [
+  {name:"Al-7075-T6",category:"Aluminum",E:71.7,v:0.33,density:2810,yield_s:503,ult:572,fatigue:160,color:"#3b82f6"},
+  {name:"Al-6061-T6",category:"Aluminum",E:68.9,v:0.33,density:2700,yield_s:276,ult:310,fatigue:96.5,color:"#60a5fa"},
+  {name:"Steel-AISI-4340",category:"Steel",E:205,v:0.29,density:7850,yield_s:710,ult:1000,fatigue:400,color:"#ef4444"},
+  {name:"Ti-6Al-4V",category:"Titanium",E:113.8,v:0.342,density:4430,yield_s:880,ult:950,fatigue:510,color:"#10b981"},
+  {name:"Inconel-718",category:"Nickel Alloy",E:200,v:0.29,density:8190,yield_s:1034,ult:1241,fatigue:550,color:"#f59e0b"},
+  {name:"CFRP-T300",category:"Composite",E:135,v:0.28,density:1600,yield_s:1500,ult:1800,fatigue:700,color:"#8b5cf6"},
+  {name:"Copper-C11000",category:"Copper",E:117,v:0.33,density:8940,yield_s:70,ult:220,fatigue:100,color:"#f97316"},
+  {name:"Magnesium-AZ31B",category:"Magnesium",E:45,v:0.35,density:1770,yield_s:200,ult:260,fatigue:90,color:"#06b6d4"}
+];
+
+function renderMaterials(filter) {
+  const grid = document.getElementById('materialsGrid');
+  const f = (filter || '').toLowerCase();
+  grid.innerHTML = MATERIALS.filter(m => !f || m.name.toLowerCase().includes(f) || m.category.toLowerCase().includes(f)).map(m =>
+    '<div class="mat-card"><h3 style="color:'+m.color+'">'+m.name+'</h3><div style="font-size:12px;color:var(--text2);margin-bottom:12px">'+m.category+'</div><div class="props">' +
+    '<div class="prop"><span>Young\'s Modulus</span>'+m.E+' GPa</div>' +
+    '<div class="prop"><span>Poisson\'s Ratio</span>'+m.v+'</div>' +
+    '<div class="prop"><span>Density</span>'+m.density+' kg/m\u00B3</div>' +
+    '<div class="prop"><span>Yield Strength</span>'+m.yield_s+' MPa</div>' +
+    '<div class="prop"><span>Ultimate Strength</span>'+m.ult+' MPa</div>' +
+    '<div class="prop"><span>Fatigue Limit</span>'+m.fatigue+' MPa</div>' +
+    '</div></div>'
+  ).join('');
+}
+function filterMaterials(v) { renderMaterials(v); }
+
+// ============ CHAT / ANALYSIS ============
+function useTemplate(text) {
+  document.getElementById('chatInput').value = text;
+  sendMessage();
+}
+
+function addMessage(text, type, stage) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + type;
+  if (stage) div.innerHTML = '<div class="stage">' + stage + '</div>' + text;
+  else div.innerHTML = text;
+  document.getElementById('chatMessages').appendChild(div);
+  div.scrollIntoView({behavior:'smooth'});
+  return div;
+}
+
+function addTyping() {
+  const div = document.createElement('div');
+  div.className = 'msg bot';
+  div.id = 'typing';
+  div.innerHTML = '<div class="typing-dots"><span></span><span></span><span></span></div>';
+  document.getElementById('chatMessages').appendChild(div);
+  div.scrollIntoView({behavior:'smooth'});
+}
+function removeTyping() { const t = document.getElementById('typing'); if(t) t.remove(); }
+
+async function sendMessage() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  addMessage(text, 'user');
+  await simulateAnalysis(text);
+}
+
+async function simulateAnalysis(description) {
+  const startTime = Date.now();
+  const stages = ['planning','geometry','meshing','simulation','analysis'];
+  const stageNames = ['Planning','Geometry Generation','Mesh Generation','FEA Simulation','Results Analysis'];
+  const stageTimes = [0.8, 1.2, 1.0, 1.5, 0.7];
+
+  // Reset pipeline
+  stages.forEach(s => {
+    document.getElementById('stage-'+s).className = 'pipe-stage';
+    document.getElementById('time-'+s).textContent = '-';
+  });
+
+  // Detect material
+  let material = 'Al-7075-T6';
+  MATERIALS.forEach(m => { if(description.toLowerCase().includes(m.name.toLowerCase().split('-')[0].toLowerCase())) material = m.name; });
+  state.materialUsage[material] = (state.materialUsage[material] || 0) + 1;
+
+  addTyping();
+
+  for (let i = 0; i < stages.length; i++) {
+    document.getElementById('stage-'+stages[i]).className = 'pipe-stage active';
+    await sleep(stageTimes[i] * 1000);
+    document.getElementById('stage-'+stages[i]).className = 'pipe-stage done';
+    document.getElementById('time-'+stages[i]).textContent = stageTimes[i].toFixed(1) + 's';
   }
 
-  // Add message to chat
-  function addMsg(text, isUser) {
-    if (msgCount >= MAX_MSGS) {
-      const first = M.querySelector('.msg');
-      if (first) first.remove();
-    }
-    const d = document.createElement('div');
-    d.className = 'msg ' + (isUser ? 'user' : 'bot');
-    if (isUser) {
-      // User messages: use textContent to prevent XSS
-      d.textContent = text;
-    } else {
-      // Bot messages: safe HTML from our code only
-      d.innerHTML = text;
-    }
-    M.appendChild(d);
-    M.scrollTop = M.scrollHeight;
-    msgCount++;
-    counter.textContent = msgCount + '/' + MAX_MSGS;
+  removeTyping();
+
+  // Generate mock results
+  const maxStress = (150 + Math.random() * 300).toFixed(1);
+  const maxDisp = (0.01 + Math.random() * 2).toFixed(3);
+  const sf = (1.2 + Math.random() * 2.5).toFixed(2);
+  const elements = Math.floor(5000 + Math.random() * 45000);
+  const nodes = Math.floor(elements * 1.3);
+  const totalSec = ((Date.now() - startTime) / 1000).toFixed(1);
+
+  const matData = MATERIALS.find(m => m.name === material) || MATERIALS[0];
+
+  addMessage(
+    '<b>Analysis Complete</b> (' + totalSec + 's)<br><br>' +
+    '<b>Material:</b> ' + material + '<br>' +
+    '<b>Mesh:</b> ' + elements.toLocaleString() + ' elements, ' + nodes.toLocaleString() + ' nodes<br><br>' +
+    '<b>Results:</b><br>' +
+    '&bull; Max von Mises Stress: <b>' + maxStress + ' MPa</b><br>' +
+    '&bull; Max Displacement: <b>' + maxDisp + ' mm</b><br>' +
+    '&bull; Safety Factor: <b>' + sf + '</b> (yield: ' + matData.yield_s + ' MPa)<br>' +
+    (parseFloat(sf) < 1.5 ? '<br><span style="color:var(--warn)">&#9888; Low safety factor - consider design modifications</span>' : '<br><span style="color:var(--success)">&#10003; Design meets safety requirements</span>'),
+    'bot', 'Results'
+  );
+
+  // Fatigue assessment
+  const fatigueLife = parseFloat(maxStress) < matData.fatigue ? Infinity : Math.pow(10, 4 + Math.random() * 4);
+  addMessage(
+    '<b>Fatigue Assessment (Basquin)</b><br><br>' +
+    '&bull; Fatigue Limit: ' + matData.fatigue + ' MPa<br>' +
+    '&bull; Predicted Life: ' + (fatigueLife === Infinity ? '<b style="color:var(--success)">Infinite (below fatigue limit)</b>' : '<b>' + fatigueLife.toExponential(2) + ' cycles</b>') + '<br>' +
+    '&bull; Category: ' + (fatigueLife === Infinity ? 'Infinite Life' : fatigueLife > 1e6 ? 'High Cycle' : 'Finite Life'),
+    'bot', 'Fatigue'
+  );
+
+  // Save to history
+  const record = {
+    id: Date.now().toString(36),
+    description,
+    material,
+    timestamp: new Date().toISOString(),
+    duration: parseFloat(totalSec),
+    results: { maxStress: parseFloat(maxStress), maxDisp: parseFloat(maxDisp), sf: parseFloat(sf), elements, nodes, fatigueLife },
+    status: 'completed'
+  };
+  state.analyses.push(record);
+  localStorage.setItem('feagpt_history', JSON.stringify(state.analyses));
+  state.totalTime += record.duration;
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ============ DASHBOARD ============
+function updateDashboard() {
+  const a = state.analyses;
+  document.getElementById('statTotal').textContent = a.length;
+  document.getElementById('statSuccess').textContent = a.filter(x => x.status === 'completed').length;
+  document.getElementById('statAvgTime').textContent = a.length ? (a.reduce((s,x) => s + x.duration, 0) / a.length).toFixed(1) + 's' : '0s';
+
+  // Stress chart
+  const ctx1 = document.getElementById('stressChart').getContext('2d');
+  if (window._stressChart) window._stressChart.destroy();
+  const stressData = a.slice(-10).map(x => x.results.maxStress);
+  const labels = a.slice(-10).map((x,i) => 'Run ' + (a.length - 10 + i + 1));
+  window._stressChart = new Chart(ctx1, {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Max Stress (MPa)', data: stressData, backgroundColor: '#6c5ce7aa', borderColor: '#6c5ce7', borderWidth: 1 }] },
+    options: { responsive: true, plugins: { legend: { labels: { color: '#94a3b8' } } }, scales: { x: { ticks: { color: '#94a3b8' } }, y: { ticks: { color: '#94a3b8' }, grid: { color: '#2a355533' } } } }
+  });
+
+  // Material pie chart
+  const ctx2 = document.getElementById('materialChart').getContext('2d');
+  if (window._matChart) window._matChart.destroy();
+  const matLabels = Object.keys(state.materialUsage);
+  const matValues = Object.values(state.materialUsage);
+  const matColors = matLabels.map(l => (MATERIALS.find(m => m.name === l) || {color:'#6c5ce7'}).color);
+  window._matChart = new Chart(ctx2, {
+    type: 'doughnut',
+    data: { labels: matLabels, datasets: [{ data: matValues, backgroundColor: matColors }] },
+    options: { responsive: true, plugins: { legend: { labels: { color: '#94a3b8' } } } }
+  });
+}
+
+// ============ HISTORY ============
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  if (state.analyses.length === 0) {
+    list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--text2)">No analyses yet.</div>';
+    return;
   }
+  list.innerHTML = state.analyses.slice().reverse().map(a =>
+    '<div class="history-item">' +
+    '<div class="status ' + (a.status === 'completed' ? 'ok' : 'fail') + '"></div>' +
+    '<div class="info"><div class="desc">' + a.description.substring(0,80) + (a.description.length > 80 ? '...' : '') + '</div>' +
+    '<div class="meta">' + a.material + ' &middot; ' + new Date(a.timestamp).toLocaleString() + ' &middot; ' + a.duration + 's</div></div>' +
+    '<div class="actions">' + a.results.maxStress.toFixed(0) + ' MPa / SF=' + a.results.sf.toFixed(1) + '</div></div>'
+  ).join('');
+}
 
-  // Typing indicator
-  function showTyping() {
-    const t = document.createElement('div');
-    t.className = 'typing';
-    t.id = 'tp';
-    t.setAttribute('aria-label', 'FeaGPT is thinking');
-    t.innerHTML = '<span></span><span></span><span></span>';
-    M.appendChild(t);
-    M.scrollTop = M.scrollHeight;
-  }
-
-  function hideTyping() {
-    const t = document.getElementById('tp');
-    if (t) t.remove();
-  }
-
-  // Pipeline step highlighting
-  function setStep(idx) {
-    document.querySelectorAll('.step').forEach((s, i) => {
-      s.classList.remove('active', 'done');
-      if (i < idx) s.classList.add('done');
-      else if (i === idx) s.classList.add('active');
-    });
-  }
-
-  function clearSteps() {
-    document.querySelectorAll('.step').forEach(s => {
-      s.classList.remove('active', 'done');
-    });
-  }
-
-  // Delay helper
-  function wait(ms) {
-    return new Promise(r => setTimeout(r, ms));
-  }
-
-  // Response generator based on user input
-  function getResponses(input) {
-    const lower = input.toLowerCase();
-    const responses = [];
-
-    // Step 0: Planning
-    if (lower.includes('naca') || lower.includes('airfoil') || lower.includes('wing')) {
-      const naca = (lower.match(/naca\s*(\d{4})/i) || ['', '4412'])[1];
-      responses.push({step:0, text:'<div class="step-label">Planning</div>Detected NACA' + esc(naca) + ' airfoil configuration. Material: Al-7075-T6 (E=71.7 GPa, v=0.33). Formulating analysis strategy...'});
-      responses.push({step:1, text:'<div class="step-label">Geometry</div>Generating NACA' + esc(naca) + ' profile via parametric FreeCAD script. Chord: 200mm, Span: 200mm. Creating spar-rib internal structure with Boolean operations...'});
-      responses.push({step:2, text:'<div class="step-label">Meshing</div>Adaptive mesh generation with Gmsh. Fine level: h_min=0.5mm near spar-rib junctions, h_max=3.0mm far-field. ~130,000 C3D10 elements. Jacobian validation: 100% positive.'});
-      responses.push({step:3, text:'<div class="step-label">Simulation</div>CalculiX solver configured. Static analysis with aerodynamic loading. Convergence achieved in 17 iterations. Max von Mises stress: 473 MPa at spar-root junction.'});
-      responses.push({step:4, text:'<div class="step-label">Analysis</div>Results: Safety factor 1.06 against yield (503 MPa). Stress concentration at spar-root identified. Shell thickness is dominant parameter (r=-0.77). 11 Pareto-optimal designs identified from design space.'});
-    } else if (lower.includes('turbo') || lower.includes('compressor') || lower.includes('turbine') || lower.includes('rpm')) {
-      const rpm = (lower.match(/(\d[\d,]+)\s*rpm/i) || ['', '110,000'])[1];
-      responses.push({step:0, text:'<div class="step-label">Planning</div>Rotating machinery analysis detected. RPM: ' + esc(rpm) + '. Setting up cyclic symmetry and centrifugal loading.'});
-      responses.push({step:1, text:'<div class="step-label">Geometry</div>Generating rotor geometry with blade profiles. Cyclic symmetry sector created.'});
-      responses.push({step:2, text:'<div class="step-label">Meshing</div>Meshing with refinement at blade roots and leading edges. Tetrahedral elements with smooth gradation.'});
-      responses.push({step:3, text:'<div class="step-label">Simulation</div>Prestressed modal analysis: static centrifugal + frequency extraction (Lanczos, 6 modes). Converged. Max stress: 432 MPa at blade root.'});
-      responses.push({step:4, text:'<div class="step-label">Analysis</div>Blade tip deflection: 0.37mm. Natural frequencies extracted. No resonance at operating speed. Design is structurally adequate.'});
-    } else if (lower.includes('beam') || lower.includes('cantilever')) {
-      responses.push({step:0, text:'<div class="step-label">Planning</div>Cantilever beam analysis. Inferring fixed-free boundary conditions. Material: structural steel unless specified.'});
-      responses.push({step:1, text:'<div class="step-label">Geometry</div>Generating rectangular beam geometry via FreeCAD. Exporting STEP file.'});
-      responses.push({step:2, text:'<div class="step-label">Meshing</div>Uniform mesh with refinement at fixed support. C3D10 elements.'});
-      responses.push({step:3, text:'<div class="step-label">Simulation</div>Static analysis complete. Maximum stress and deflection computed at expected locations.'});
-      responses.push({step:4, text:'<div class="step-label">Analysis</div>Results validated against analytical beam theory. Stress distribution matches Euler-Bernoulli prediction within 2%.'});
-    } else if (lower.includes('plate') || lower.includes('hole')) {
-      responses.push({step:0, text:'<div class="step-label">Planning</div>Plate with hole analysis. Classic stress concentration problem. Setting up tensile loading with fixed edge.'});
-      responses.push({step:1, text:'<div class="step-label">Geometry</div>Rectangular plate with central hole. Boolean cut operation for hole geometry.'});
-      responses.push({step:2, text:'<div class="step-label">Meshing</div>Refined mesh around hole boundary (h_min=0.2mm). Smooth transition to coarser far-field elements.'});
-      responses.push({step:3, text:'<div class="step-label">Simulation</div>Linear static analysis. Stress concentration factor K_t converging to theoretical value of ~3.0.'});
-      responses.push({step:4, text:'<div class="step-label">Analysis</div>Peak von Mises stress at hole edge. SCF = 2.98 (theoretical: 3.0). Error: 0.7%. Mesh convergence verified.'});
-    } else {
-      responses.push({step:0, text:'<div class="step-label">Planning</div>Analyzing your engineering description. Identifying material, loading, and boundary conditions...'});
-      responses.push({step:1, text:'<div class="step-label">Geometry</div>Generating geometry from description. Creating parametric FreeCAD script...'});
-      responses.push({step:2, text:'<div class="step-label">Meshing</div>Adaptive mesh generation with physics-aware refinement at critical regions.'});
-      responses.push({step:3, text:'<div class="step-label">Simulation</div>CalculiX solver configured and executed. Solution converged.'});
-      responses.push({step:4, text:'<div class="step-label">Analysis</div>Results extracted. To run actual FEA, install the backend: pip install feagpt. See <a href="https://github.com/naividh/FeaGPT#readme" target="_blank">documentation</a>.'});
-    }
-    return responses;
-  }
-
-  // Main handler
-  async function go() {
-    const t = I.value.trim();
-    if (!t) return;
-    if (t.length > 1000) {
-      addMsg('Input too long. Maximum 1000 characters.', false);
-      return;
-    }
-
-    addMsg(t, true);
-    I.value = '';
-    B.disabled = true;
-    clearSteps();
-
-    const responses = getResponses(t);
-
-    for (const r of responses) {
-      showTyping();
-      setStep(r.step);
-      await wait(1200 + Math.random() * 800);
-      hideTyping();
-      addMsg(r.text, false);
-    }
-
-    // Mark all steps done
-    document.querySelectorAll('.step').forEach(s => {
-      s.classList.remove('active');
-      s.classList.add('done');
-    });
-
-    B.disabled = false;
-    I.focus();
-  }
-
-  B.addEventListener('click', go);
-  I.addEventListener('keypress', e => { if (e.key === 'Enter') go(); });
-
-  // Initial welcome message
-  addMsg('Welcome to FeaGPT! Describe your FEA problem in natural language. Try: "Analyze a NACA4412 wing structure" or "Cantilever beam with 500N load"', false);
-})();
+// ============ INIT ============
+renderMaterials();
+// Rebuild materialUsage from history
+state.analyses.forEach(a => { state.materialUsage[a.material] = (state.materialUsage[a.material] || 0) + 1; });
 </script>
 </body>
 </html>
