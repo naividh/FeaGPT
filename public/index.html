@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FeaGPT - AI-Powered Finite Element Analysis</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/hdist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdfh/2.5.1/jspdf.umd.min.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#0a0e17;--sf:#131a2b;--sf2:#1a2238;--bd:#2a3555;--ac:#6c5ce7;--ac2:#a29bfe;--tx:#e2e8f0;--ok:#00d68f;--wn:#ffaa00;--ng:#ff6b6b;--in:#00b8d4}
@@ -250,7 +250,7 @@ class SparseMatrix {
         ci[b+1]=kc;cv[b+1]=kv;
       }
     }
-    return{n,rowPtr:rp,colIdx:ci,values:cv};
+    const mci=[],mcv=[];const mrp=new Int32Array(n+1);for(let i=0;i<n;i++){mrp[i]=mci.length;for(let k=rp[i];k<rp[i+1];k++){if(mci.length>0&&mci[mci.length-1]===ci[k]&&mrp[i]<mci.length){mcv[mcv.length-1]+=cv[k]}else{mci.push(ci[k]);mcv.push(cv[k])}}};mrp[n]=mci.length;return{n,rowPtr:mrp,colIdx:new Int32Array(mci),values:new Float64Array(mcv)};
   }
 }
 
@@ -276,7 +276,7 @@ function solvePCG(csr,b,tol=1e-8,maxIter=5000){
   const M=new Float64Array(n);
   for(let i=0;i<n;i++){
     for(let k=csr.rowPtr[i];k<csr.rowPtr[i+1];k++){
-      if(csr.colIdx[k]===i){M[i]=csr.values[k];break;}
+      if(csr.colIdx[k]===i){M[i]+=csr.values[k];}
     }
     if(Math.abs(M[i])<1e-30)M[i]=1;
     M[i]=1.0/M[i];
@@ -322,7 +322,7 @@ function solveDirect(csr, b) {
   for (let i = 0; i < n; i++) {
     A[i] = new Float64Array(n);
     for (let k = csr.rowPtr[i]; k < csr.rowPtr[i+1]; k++) {
-      A[i][csr.colIdx[k]] = csr.values[k];
+      A[i][csr.colIdx[k]] += csr.values[k];
     }
   }
   const x = new Float64Array(b);
@@ -1435,4 +1435,5 @@ document.addEventListener("DOMContentLoaded",()=>{updateMaterialProps();renderMa
 </script>
 </body>
 </html>
+
 
